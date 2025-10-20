@@ -10,6 +10,8 @@
 #define BUILD_FOLDER "build/"
 #define SRC_FOLDER "src/"
 
+static int async = 0;
+
 typedef struct {
     char **items;
     size_t count;
@@ -114,15 +116,25 @@ int build_programs_async(void) {
         nob_cmd_append(&cmd, "-O3", "-g", "-std=c11", "-march=znver4", "-DALLOC_STD_IMPL");
         nob_cc_output(&cmd, output_file);
         nob_cc_inputs(&cmd, input_file);
-        if (!cmd_run(&cmd, .async = &procs)) return 1;
+
+        if (async && !cmd_run(&cmd, .async = &procs) ) {
+            return 1;
+        } else if (!cmd_run(&cmd)) {
+            return 1;
+        }
 
         // Debug version
         nob_cc(&cmd);
         nob_cc_flags(&cmd);
-        nob_cmd_append(&cmd, "-g", "-std=c11", "-DDEBUG_MODE", "-DALLOC_STD_IMPL");
+        nob_cmd_append(&cmd, "-Og", "-g", "-std=c11", "-DDEBUG_MODE", "-DALLOC_STD_IMPL");
         nob_cc_output(&cmd, output_file_dbg);
         nob_cc_inputs(&cmd, input_file);
-        if (!cmd_run(&cmd, .async = &procs)) return 1;
+
+        if (async && !cmd_run(&cmd, .async = &procs) ) {
+            return 1;
+        } else if (!cmd_run(&cmd)) {
+            return 1;
+        }
     }
 
 
