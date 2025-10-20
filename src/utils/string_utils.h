@@ -505,7 +505,8 @@ string_t string_trim_left(const string_t *str) {
 
     // Trim left
     char first_char = result.chars[0];
-    while (result.count > 0 && first_char == ' ' || first_char == '\n' || first_char == '\t') {
+    while (result.count > 0 && 
+            (first_char == ' ' || first_char == '\n' || first_char == '\t')) {
         result.chars = &result.chars[1];
         result.count--;
 
@@ -527,7 +528,8 @@ string_t string_trim_right(const string_t *str) {
     if (result.count > 0) {
         last_char = result.chars[result.count - 1];
     }
-    while (result.count > 0 && last_char == ' ' || last_char == '\n' || last_char == '\t') {
+    while (result.count > 0 && 
+            (last_char == ' ' || last_char == '\n' || last_char == '\t')) {
         last_char = result.chars[result.count - 1];
         result.count--;
 
