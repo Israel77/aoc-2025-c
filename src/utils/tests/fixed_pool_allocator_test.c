@@ -15,10 +15,10 @@ static int tests_failed = 0;
 
 static void test_primitive(void) {
     /* Initialise a pool that can hold 10 ints */
-    fixed_pool_context_t *pool = fixed_pool_init(sizeof(int), 10,
+    fixed_pool_context_t pool = fixed_pool_init(sizeof(int), 10,
                                                 &global_std_allocator, NULL);
 
-    int *p = (int *)fixed_pool_allocator.alloc(pool, sizeof(int));
+    int *p = (int *)fixed_pool_allocator.alloc(&pool, sizeof(int));
     if (p) { 
         TEST_OK("Fixed pool alloc int");
     } else {
@@ -31,11 +31,11 @@ static void test_primitive(void) {
         TEST_FAIL("Fixed pool write/read int");
     }
 
-    fixed_pool_allocator.free(pool, p, sizeof(int));
+    fixed_pool_allocator.free(&pool, p, sizeof(int));
 
 
     /* Clean up */
-    fixed_pool_free_all(pool);
+    fixed_pool_free_all(&pool);
 }
 
 typedef struct {
@@ -47,10 +47,10 @@ typedef struct {
 static void test_struct(void) {
     const size_t pool_len = 5;
 
-    fixed_pool_context_t *pool = fixed_pool_init(sizeof(test_struct_t), pool_len,
+    fixed_pool_context_t pool = fixed_pool_init(sizeof(test_struct_t), pool_len,
                                                 &global_std_allocator, NULL);
 
-    test_struct_t *s = (test_struct_t *)fixed_pool_allocator.alloc(pool,
+    test_struct_t *s = (test_struct_t *)fixed_pool_allocator.alloc(&pool,
                                                                     sizeof(test_struct_t));
     if (s) {
         TEST_OK("fixed pool alloc struct");
@@ -66,19 +66,19 @@ static void test_struct(void) {
         TEST_OK("fixed pool struct fields");
     }
 
-    fixed_pool_allocator.free(pool, s, sizeof(test_struct_t));
-    fixed_pool_free_all(pool);
+    fixed_pool_allocator.free(&pool, s, sizeof(test_struct_t));
+    fixed_pool_free_all(&pool);
 }
 
 static void test_exhaustion_and_reuse(void) {
     const size_t pool_len = 3;
 
-    fixed_pool_context_t *pool = fixed_pool_init(sizeof(int), pool_len,
+    fixed_pool_context_t pool = fixed_pool_init(sizeof(int), pool_len,
                                                 &global_std_allocator, NULL);
 
-    int *a = (int *)fixed_pool_allocator.alloc(pool, sizeof(int));
-    int *b = (int *)fixed_pool_allocator.alloc(pool, sizeof(int));
-    int *c = (int *)fixed_pool_allocator.alloc(pool, sizeof(int));
+    int *a = (int *)fixed_pool_allocator.alloc(&pool, sizeof(int));
+    int *b = (int *)fixed_pool_allocator.alloc(&pool, sizeof(int));
+    int *c = (int *)fixed_pool_allocator.alloc(&pool, sizeof(int));
     if (!a || !b || !c) {
         TEST_FAIL("fixed pool allocate up to capacity");
     } else {
@@ -86,7 +86,7 @@ static void test_exhaustion_and_reuse(void) {
     }
 
     /* Pool should now be exhausted */
-    int *d = (int *)fixed_pool_allocator.alloc(pool, sizeof(int));
+    int *d = (int *)fixed_pool_allocator.alloc(&pool, sizeof(int));
     if (d) {
         TEST_FAIL("fixed pool try to allocate beyond capacity");
     } else {
@@ -94,8 +94,8 @@ static void test_exhaustion_and_reuse(void) {
     }
 
     /* Free one slot and allocate again – should succeed */
-    fixed_pool_allocator.free(pool, b, sizeof(int));
-    int *e = (int *)fixed_pool_allocator.alloc(pool, sizeof(int));
+    fixed_pool_allocator.free(&pool, b, sizeof(int));
+    int *e = (int *)fixed_pool_allocator.alloc(&pool, sizeof(int));
     if (!e) {
         TEST_FAIL("fixed pool reuse after free");
     } else {
@@ -103,11 +103,11 @@ static void test_exhaustion_and_reuse(void) {
     }
 
     /* Clean up remaining allocations */
-    fixed_pool_allocator.free(pool, a, sizeof(int));
-    fixed_pool_allocator.free(pool, c, sizeof(int));
-    fixed_pool_allocator.free(pool, e, sizeof(int));
+    fixed_pool_allocator.free(&pool, a, sizeof(int));
+    fixed_pool_allocator.free(&pool, c, sizeof(int));
+    fixed_pool_allocator.free(&pool, e, sizeof(int));
 
-    fixed_pool_free_all(pool);
+    fixed_pool_free_all(&pool);
 }
 
 int main(void) {

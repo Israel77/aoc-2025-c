@@ -258,7 +258,6 @@ static allocator_t arena_allocator = {
 typedef struct {
     size_t object_size;
     size_t pool_size;
-    size_t free_index;
 
     // Base allocator (only used when initializing and destroying)
     const allocator_t *inner_alloc;
@@ -323,6 +322,9 @@ static void fixed_pool_free(void *ctx, void *ptr, size_t size) {
 
 static void *fixed_pool_realloc(void *ctx, void *ptr, size_t old_size, size_t new_size) {
     // Reallocation is not supported in a fixed pool allocator
+#ifdef DEBUG_MODE
+    assert("You tried to reallocate using a fixed pool allocator");
+#endif
     UNUSED(ctx);
     UNUSED(ptr);
     UNUSED(old_size);
@@ -331,21 +333,20 @@ static void *fixed_pool_realloc(void *ctx, void *ptr, size_t old_size, size_t ne
 }
 //#endregion: Allocator interface
 
-static fixed_pool_context_t *fixed_pool_init(size_t object_size, size_t pool_size, const allocator_t *allocator, void *ctx) {
+static fixed_pool_context_t fixed_pool_init(size_t object_size, size_t pool_size, const allocator_t *allocator, void *ctx) {
 
-    fixed_pool_context_t *pool_ctx = (fixed_pool_context_t *) allocator->alloc(ctx, sizeof(fixed_pool_context_t));
-
-    pool_ctx->object_size = object_size;
-    pool_ctx->pool_size = pool_size;
-    pool_ctx->free_index = 0;
-    pool_ctx->pool = (uint8_t *) allocator->alloc(ctx, object_size * pool_size);
-    pool_ctx->is_free = (bool *) allocator->alloc(ctx, sizeof(bool) * pool_size);
-    pool_ctx->inner_alloc = allocator;
-    pool_ctx->inner_ctx = ctx;
+    fixed_pool_context_t pool_ctx = {
+        .object_size = object_size,
+        .pool_size = pool_size,
+        .pool = (uint8_t *) allocator->alloc(ctx, object_size * pool_size),
+        .is_free = (bool *) allocator->alloc(ctx, sizeof(bool) * pool_size),
+        .inner_alloc = allocator,
+        .inner_ctx = ctx,
+    };
 
     // Initialize the free list
     for (size_t i = 0; i < pool_size; ++i) {
-        pool_ctx->is_free[i] = true;
+        pool_ctx.is_free[i] = true;
     }
 
     return pool_ctx;
@@ -356,8 +357,6 @@ static void fixed_pool_free_all(fixed_pool_context_t *pool_ctx) {
     pool_ctx->inner_alloc->free(pool_ctx->inner_ctx, pool_ctx->pool, pool_ctx->object_size * pool_ctx->pool_size );
     // Free the array storing free indices
     pool_ctx->inner_alloc->free(pool_ctx->inner_ctx, pool_ctx->is_free, sizeof(bool) * pool_ctx->pool_size);
-    // Free the pool context
-    pool_ctx->inner_alloc->free(pool_ctx->inner_ctx, pool_ctx, sizeof(fixed_pool_context_t));
 }
 
 static allocator_t fixed_pool_allocator = {
