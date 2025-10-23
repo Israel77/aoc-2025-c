@@ -146,7 +146,7 @@ static void test_addition() {
 static void test_subtraction() {
 
     error_t err;
-    allocator_t *allocator = &arena_allocator;
+    const allocator_t *allocator = &arena_allocator;
     arena_context_t test_ctx = {.inner_alloc = &global_std_allocator, .inner_ctx = NULL};
 
     bigint_t num1, num2, result, expected_result;
@@ -276,7 +276,7 @@ static void test_multiplication() {
 static void test_division() {
 
     error_t err = {0};
-    allocator_t *allocator = &arena_allocator;
+    const allocator_t *allocator = &arena_allocator;
     arena_context_t test_ctx = { .inner_alloc = &global_std_allocator };
 
     bigint_t num1, num2;

@@ -16,7 +16,7 @@ typedef struct {
     size_t count;
     size_t capacity;
     size_t min_capacity;
-    allocator_t *allocator;
+    const allocator_t *allocator;
     void *alloc_ctx;
 } array_info_t;
 

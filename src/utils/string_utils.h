@@ -30,11 +30,11 @@ typedef struct {
 
 
 // Creates a new string builder from a C string
-string_builder_t sb_from_cstr(const char *cstr, allocator_t *allocator, void *alloc_ctx);
+string_builder_t sb_from_cstr(const char *cstr, const allocator_t *allocator, void *alloc_ctx);
 // Creates a new string builder with a given capacity
-string_builder_t sb_with_capacity(const size_t capacity, allocator_t *allocator, void *alloc_ctx);
+string_builder_t sb_with_capacity(const size_t capacity, const allocator_t *allocator, void *alloc_ctx);
 // Creates a new string builder from a file
-string_builder_t sb_read_file(FILE *file, allocator_t *allocator, void *alloc_ctx);
+string_builder_t sb_read_file(FILE *file, const allocator_t *allocator, void *alloc_ctx);
 
 // Append a character
 void sb_append_char(string_builder_t *sb, const char ch);
@@ -48,7 +48,7 @@ void sb_append_sb(string_builder_t *sb, const string_builder_t *other);
 string_t sb_build(string_builder_t *sb);
 
 // Joins the array of strings to a string builder, separated by a delimiter (optional)
-string_builder_t string_array_join_by_char(string_array_t array, char delimiter, allocator_t *allocator, void *alloc_ctx);
+string_builder_t string_array_join_by_char(string_array_t array, char delimiter, const allocator_t *allocator, void *alloc_ctx);
 
 // Builds a string directly from a cstr (chars will point to the same memory address as the cstr).
 string_t string_from_cstr(const char *cstr);
@@ -56,8 +56,8 @@ string_t string_from_cstr(const char *cstr);
 bool string_equals(const string_t *str, const string_t *other);
 
 // Split a string by a given delimiter
-string_array_t string_split_by_char(const string_t *str, const char delimiter, allocator_t *allocator, void *alloc_ctx);
-string_array_t string_split_by_str(const string_t *str, const string_t *delimiter, allocator_t *allocator, void *alloc_ctx);
+string_array_t string_split_by_char(const string_t *str, const char delimiter, const allocator_t *allocator, void *alloc_ctx);
+string_array_t string_split_by_str(const string_t *str, const string_t *delimiter, const allocator_t *allocator, void *alloc_ctx);
 
 string_t string_trim_left(const string_t *str);
 string_t string_trim_right(const string_t *str);
@@ -88,7 +88,7 @@ uint64_t string_parse_u64_unsafe(const string_t *str, error_t *err);
 #include <stdlib.h>
 #include <stdio.h>
 
-string_builder_t sb_from_cstr(const char *cstr, allocator_t *allocator, void *alloc_ctx) {
+string_builder_t sb_from_cstr(const char *cstr, const allocator_t *allocator, void *alloc_ctx) {
     
 
     size_t count = strlen(cstr);
@@ -110,7 +110,7 @@ string_builder_t sb_from_cstr(const char *cstr, allocator_t *allocator, void *al
 
     return sb;
 }
-string_builder_t sb_with_capacity(const size_t capacity, allocator_t *allocator, void *alloc_ctx) {
+string_builder_t sb_with_capacity(const size_t capacity, const allocator_t *allocator, void *alloc_ctx) {
     
     string_builder_t sb = {
         .array_info = {
@@ -204,7 +204,7 @@ bool string_equals(const string_t *str, const string_t *other) {
     return true;
 }
 
-string_array_t string_split_by_char(const string_t *str, const char delimiter, allocator_t *allocator, void *alloc_ctx) {
+string_array_t string_split_by_char(const string_t *str, const char delimiter, const allocator_t *allocator, void *alloc_ctx) {
     string_array_t result = {
         .array_info = {
             .item_size = sizeof (string_t),
@@ -240,7 +240,7 @@ string_array_t string_split_by_char(const string_t *str, const char delimiter, a
     return result;
 }
 
-string_array_t string_split_by_str(const string_t *str, const string_t *delimiter, allocator_t *allocator, void *alloc_ctx) {
+string_array_t string_split_by_str(const string_t *str, const string_t *delimiter, const allocator_t *allocator, void *alloc_ctx) {
     string_array_t result = {
         .array_info = {
             .allocator = allocator,
@@ -469,7 +469,7 @@ uint64_t string_parse_u64_unsafe(const string_t *str, error_t *err) {
 }
 
 // Creates a new string builder from a file
-string_builder_t sb_read_file(FILE *file, allocator_t *allocator, void *alloc_ctx) {
+string_builder_t sb_read_file(FILE *file, const allocator_t *allocator, void *alloc_ctx) {
     string_builder_t sb = {
         .array_info = {
             .item_size = sizeof (char),

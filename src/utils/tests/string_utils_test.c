@@ -7,6 +7,9 @@
 #ifndef STD_ALLOC_IMPL
 #define STD_ALLOC_IMPL
 #endif
+#ifndef ALLOC_ARENA_IMPL
+#define ALLOC_ARENA_IMPL
+#endif
 #include "../allocator.h"
 
 #define STRING_UTILS_IMPL
@@ -21,7 +24,7 @@ static int tests_failed = 0;
 static void test_sb_from_cstr(void) {
     const char *src = "hello world";
 
-    allocator_t *a = &global_std_allocator;
+    const allocator_t *a = &global_std_allocator;
     void *ctx = NULL;
 
     string_builder_t sb = sb_from_cstr(src, a, ctx);
@@ -35,12 +38,12 @@ static void test_sb_from_cstr(void) {
     if (ok) TEST_OK("sb_from_cstr basic functionality");
     else    TEST_FAIL("sb_from_cstr basic functionality");
 
-    a->free(ctx, sb.items, sb.array_info.capacity * sizeof(char));
+    da_free(sb.items, &sb.array_info);
 }
 
 static void test_sb_with_capacity(void) {
     const size_t req_cap = 10;
-    allocator_t *a = &global_std_allocator;
+    const allocator_t *a = &global_std_allocator;
     void *ctx = NULL;
 
     string_builder_t sb = sb_with_capacity(req_cap, a, ctx);
@@ -57,7 +60,7 @@ static void test_sb_with_capacity(void) {
 }
 
 static void test_sb_append_char(void) {
-    allocator_t *a = &global_std_allocator;
+    const allocator_t *a = &global_std_allocator;
     void *ctx = NULL;
 
     string_builder_t sb = sb_with_capacity(2, a, ctx);
@@ -78,7 +81,7 @@ static void test_sb_append_char(void) {
 }
 
 static void test_sb_append_cstr(void) {
-    allocator_t *a = &global_std_allocator;
+    const allocator_t *a = &global_std_allocator;
     void *ctx = NULL;
 
     string_builder_t sb = sb_with_capacity(5, a, ctx);
@@ -98,7 +101,7 @@ static void test_sb_append_cstr(void) {
 }
 
 static void test_sb_append_str_sized(void) {
-    allocator_t *a = &global_std_allocator;
+    const allocator_t *a = &global_std_allocator;
     void *ctx = NULL;
 
     string_builder_t sb = sb_with_capacity(0, a, ctx);
@@ -121,7 +124,7 @@ static void test_sb_append_str_sized(void) {
 }
 
 static void test_sb_append_sb(void) {
-    allocator_t *a = &global_std_allocator;
+    const allocator_t *a = &global_std_allocator;
     void *ctx = NULL;
 
     string_builder_t src = sb_from_cstr("src", a, ctx);
@@ -143,12 +146,12 @@ static void test_sb_append_sb(void) {
 
 static void test_string_split_by_char(void) {
     /* Use the global standard allocator for simplicity */
-    allocator_t *a   = &global_std_allocator;
+    const allocator_t *a   = &global_std_allocator;
     void       *ctx  = NULL;
 
     /* Input string: "a,b,,c" – note the empty token between the two commas */
     const char *src_cstr = "a,b,,c";
-    string_t src = string_from_cstr(src_cstr);          /* helper from previous tests */
+    string_t src = string_from_cstr(src_cstr);
 
     /* Split on ',' */
     string_array_t parts = string_split_by_char(&src, ',', a, ctx);
@@ -250,6 +253,26 @@ static void test_string_parse_u64_unsafe() {
     else    TEST_FAIL("string_parse_i64_unsafe did not work");
 }
 
+static void test_sb_reversion() {
+
+    const allocator_t *a = &arena_allocator;
+    arena_context_t ctx = {.inner_alloc = &global_std_allocator, .inner_ctx = NULL};
+
+    string_builder_t base = sb_from_cstr("123456789", a, &ctx);
+    string_builder_t rev = sb_from_cstr("123456789", a, &ctx);
+    da_reverse(rev.items, &rev.array_info);
+
+    string_t base_str = sb_build(&base);
+    string_t rev_str  = sb_build(&rev);
+    
+    bool ok = string_equals(&base_str, &rev_str);
+
+    if (ok) TEST_OK("string_parse_i64_unsafe parses correctly");
+    else    TEST_FAIL("string_parse_i64_unsafe did not work");
+
+    arena_free_all(&ctx);
+}
+
 
 /*------------------------------------------------------------------*
  *  Main – run all tests and report summary
@@ -266,6 +289,7 @@ int main(void) {
     test_string_parse_u64_safe();
     test_string_parse_u64_safe_overflow();
     test_string_parse_u64_unsafe();
+    test_sb_reversion();
 
     printf("--- Summary: String utilities ---\n");
     printf("Passed: %d\n", tests_passed);

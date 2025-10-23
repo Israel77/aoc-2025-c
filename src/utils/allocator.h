@@ -25,33 +25,33 @@ typedef uint64_t size_t;
 
 // The basic data structure that represents a generic allocator
 typedef struct {
-    void *(*alloc)(void *ctx, size_t size);
-    void *(*realloc)(void *ctx, void *ptr, size_t old_size, size_t new_size);
-    void (*free)(void *ctx, void *ptr, size_t size);
+    void *(*alloc)(void *ctx, const size_t size);
+    void *(*realloc)(void *ctx, void *ptr, const size_t old_size, const size_t new_size);
+    void (*free)(void *ctx, void *ptr, const size_t size);
 } allocator_t;
 
 #ifdef ALLOC_STD_IMPL
 
 #include <stdlib.h>
 
-static void *std_alloc(void *ctx, size_t size) {
+static void *std_alloc(void *ctx, const size_t size) {
     UNUSED(ctx);
     return malloc(size);
 }
 
-static void *std_realloc(void *ctx, void *ptr, size_t old_size, size_t new_size) {
+static void *std_realloc(void *ctx, void *ptr, const size_t old_size, const size_t new_size) {
     UNUSED(ctx);
     UNUSED(old_size);
     return realloc(ptr, new_size);
 }
 
-static void std_free(void *ctx, void *ptr, size_t size) {
+static void std_free(void *ctx, void *ptr, const size_t size) {
     UNUSED(ctx);
     UNUSED(size);
     return free(ptr);
 }
 
-static allocator_t global_std_allocator = {
+static const allocator_t global_std_allocator = {
     .alloc = &std_alloc,
     .realloc = &std_realloc,
     .free = &std_free
@@ -78,7 +78,7 @@ struct arena_chunk_t {
     uintptr_t data[];
 };
 
-static arena_chunk_t *arena_chunk_init(size_t ensure_capacity, allocator_t *allocator, void *inner_ctx) {
+static arena_chunk_t *arena_chunk_init(size_t ensure_capacity, const allocator_t *allocator, void *inner_ctx) {
     arena_chunk_t *result = {0};
 
     // Use the maximum between ARENA_CHUNK_DEFAULT_CAP and the argument passed
@@ -119,11 +119,11 @@ typedef struct {
     arena_chunk_t *end;
 
     // Arenas are built on top of available allocators
-    allocator_t *inner_alloc;
+    const allocator_t *inner_alloc;
     void        *inner_ctx;
 } arena_context_t;
 
-static void *arena_alloc(void *ctx, size_t size) {
+static void *arena_alloc(void *ctx, const size_t size) {
     arena_context_t *arena = (arena_context_t *)ctx;
     
     // Use the std allocator if it is available and no other allocator was provided
@@ -171,7 +171,7 @@ static void *arena_alloc(void *ctx, size_t size) {
     return result;
 }
 
-static void *arena_realloc(void *ctx, void *ptr, size_t old_size, size_t new_size) {
+static void *arena_realloc(void *ctx, void *ptr, const size_t old_size, const size_t new_size) {
     arena_context_t *arena = (arena_context_t *)ctx;
 
     if (new_size == 0) {
@@ -213,7 +213,7 @@ static void *arena_realloc(void *ctx, void *ptr, size_t old_size, size_t new_siz
     return arena_alloc(ctx, new_size);
 }
 
-static void arena_free(void *ctx, void *ptr, size_t size) {
+static void arena_free(void *ctx, void *ptr, const size_t size) {
     UNUSED(ctx);
     UNUSED(ptr);
     UNUSED(size);
@@ -290,7 +290,7 @@ static void fixed_pool_free_by_index(fixed_pool_context_t *pool_ctx, size_t inde
 }
 
 //#region: Allocator interface
-static void *fixed_pool_alloc(void *ctx, size_t size) {
+static void *fixed_pool_alloc(void *ctx, const size_t size) {
     fixed_pool_context_t *pool_ctx = (fixed_pool_context_t *)ctx;
 
     if (size != pool_ctx->object_size) {
@@ -306,7 +306,7 @@ static void *fixed_pool_alloc(void *ctx, size_t size) {
     return pool_ctx->pool + (index * pool_ctx->object_size); // Return pointer to the object
 }
 
-static void fixed_pool_free(void *ctx, void *ptr, size_t size) {
+static void fixed_pool_free(void *ctx, void *ptr, const size_t size) {
     // Size is defined by the pool context
     UNUSED(size);
 
@@ -320,7 +320,7 @@ static void fixed_pool_free(void *ctx, void *ptr, size_t size) {
     fixed_pool_free_by_index(pool_ctx, index);
 }
 
-static void *fixed_pool_realloc(void *ctx, void *ptr, size_t old_size, size_t new_size) {
+static void *fixed_pool_realloc(void *ctx, void *ptr, const size_t old_size, const size_t new_size) {
     // Reallocation is not supported in a fixed pool allocator
 #ifdef DEBUG_MODE
     assert("You tried to reallocate using a fixed pool allocator");
