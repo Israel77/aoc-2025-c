@@ -2,17 +2,17 @@
 #define ALLOCATOR_H
 
 // These headers are fairly easy to replace if they're not available, they're mostly for typedefs
-// assert is optional, but recommended to guarantee some invariants.
 #include <stdint.h>
 #include <stdbool.h>
+// Assert is optional, but recommended to guarantee some invariants.
 #include <assert.h>
 
 // Importing stdlib is only needed at the top level to define what is size_t
 // and when using the std allocator. If you provide a custom definition of 
 // size_t and don't use the std allocator, there is no need to include it.
 // Example: 
-#define CUSTOM_SIZE_T
-typedef uint64_t size_t;
+// #define CUSTOM_SIZE_T
+// typedef uint64_t size_t;
 #ifndef CUSTOM_SIZE_T
 #include <stdlib.h>
 #endif
@@ -142,8 +142,8 @@ static void *arena_alloc(void *ctx, const size_t size) {
     }
 
     /*
-     * NOTE: The following allocation strategy prioritizes speed over memory usage
-     * to make the implementation more memory efficient, allocate within the first
+     * NOTE: The following allocation strategy prioritizes speed over memory usage.
+     * To make the implementation more memory efficient, allocate within the first
      * available chunk, rather than always choosing the last chunk.
      */
 
@@ -323,7 +323,7 @@ static void fixed_pool_free(void *ctx, void *ptr, const size_t size) {
 static void *fixed_pool_realloc(void *ctx, void *ptr, const size_t old_size, const size_t new_size) {
     // Reallocation is not supported in a fixed pool allocator
 #ifdef DEBUG_MODE
-    assert("You tried to reallocate using a fixed pool allocator");
+    assert(NULL && "You tried to reallocate using a fixed pool allocator");
 #endif
     UNUSED(ctx);
     UNUSED(ptr);
