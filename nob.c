@@ -126,7 +126,7 @@ int build_programs_async(void) {
         // Debug version
         nob_cc(&cmd);
         nob_cc_flags(&cmd);
-        nob_cmd_append(&cmd, "-Og", "-g", "-std=c11", "-DDEBUG_MODE", "-DALLOC_STD_IMPL");
+        nob_cmd_append(&cmd,  "-g", "-std=c11", "-DDEBUG_MODE", "-DALLOC_STD_IMPL");
         nob_cc_output(&cmd, output_file_dbg);
         nob_cc_inputs(&cmd, input_file);
 

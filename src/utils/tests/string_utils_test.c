@@ -255,8 +255,8 @@ static void test_string_parse_u64_unsafe() {
 
 static void test_sb_reversion() {
 
-    const allocator_t *a = &arena_allocator;
-    arena_context_t ctx = {.inner_alloc = &global_std_allocator, .inner_ctx = NULL};
+    const allocator_t *a = &multiarena_allocator;
+    multiarena_context_t ctx = {.inner_alloc = &global_std_allocator, .inner_ctx = NULL};
 
     string_builder_t base = sb_from_cstr("123456789", a, &ctx);
     string_builder_t rev = sb_from_cstr("987654321", a, &ctx);
@@ -267,7 +267,7 @@ static void test_sb_reversion() {
     if (ok) TEST_OK("string buffer can be reversed");
     else    TEST_FAIL("string buffer reversion did not work");
 
-    arena_free_all(&ctx);
+    multiarena_free_all(&ctx);
 }
 
 

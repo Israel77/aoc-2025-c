@@ -2,6 +2,7 @@
 #define ALLOCATOR_H
 
 // These headers are fairly easy to replace if they're not available, they're mostly for typedefs
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 // Assert is optional, but recommended to guarantee some invariants.
@@ -69,62 +70,149 @@ static const allocator_t global_std_allocator = {
 #include <string.h>
 #include <stdbool.h>
 
-typedef struct arena_chunk_t arena_chunk_t;
-struct arena_chunk_t {
-    arena_chunk_t *next;
-    size_t count;
+/* Single region arena_allocator */
+
+typedef struct {
+    size_t offset;
+    size_t capacity;
+
+    uintptr_t data[];
+} arena_region_t;
+
+typedef struct {
+    // Arenas are built on top of available allocators
+    const allocator_t *inner_alloc;
+    void        *inner_ctx;
+
+    arena_region_t region;
+} arena_context_t;
+
+static inline void *arena_alloc(void *ctx, const size_t size);
+static inline void *arena_realloc(void *ctx, void *ptr, const size_t old_size, const size_t new_size);
+static inline void arena_free(void *ctx, void *ptr, const size_t size);
+
+static inline void *arena_region_bump_aligned(arena_region_t *region, size_t size, size_t alignment);
+static inline void *arena_region_bump(arena_region_t *region, size_t size);
+static inline void arena_free_all(arena_context_t *arena);
+
+static inline void *arena_region_bump_aligned(arena_region_t *region, size_t size, size_t alignment) {
+    void *result = NULL;
+
+    assert(((alignment & (alignment - 1)) == 0)
+            && "Alignment must be a power of 2");
+
+    /* Align the pointer forward */
+    uintptr_t offset = (uintptr_t)region->data + region->offset;
+    uintptr_t modulo = offset & (uintptr_t)(alignment - 1);
+
+    if (modulo != 0) {
+        offset += alignment - modulo;
+    }
+
+    if (region->capacity - offset < size) {
+        return NULL;
+    }
+
+    result = region->data + offset;
+    region->offset = offset + size;
+    
+    return result;
+}
+
+static inline void *arena_region_bump(arena_region_t *region, size_t size) {
+    void *result;
+
+    if (region->capacity - region->offset < size) {
+        return NULL;
+    }
+
+    result = region->data + region->offset;
+    region->offset += size;
+
+    return result;
+}
+
+static inline void *arena_alloc(void *ctx, const size_t size) {
+    return arena_region_bump(ctx, size);
+}
+
+static inline void *arena_realloc(void *ctx, void *ptr, const size_t old_size, const size_t new_size) {
+    UNUSED(old_size);
+    UNUSED(ptr);
+    return arena_region_bump(ctx, new_size);
+}
+
+static inline void arena_free(void *ctx, void *ptr, const size_t size) {
+    UNUSED(ctx);
+    UNUSED(ptr);
+    UNUSED(size);
+}
+
+/* Multi-region arena allocator */
+typedef struct multiarena_region_t multiarena_region_t;
+struct multiarena_region_t {
+    multiarena_region_t *next;
+    size_t offset;
     size_t capacity;
 
     uintptr_t data[];
 };
 
-static arena_chunk_t *arena_chunk_init(size_t ensure_capacity, const allocator_t *allocator, void *inner_ctx) {
-    arena_chunk_t *result = {0};
+typedef struct {
+    multiarena_region_t *begin;
+    multiarena_region_t *end;
+
+    // Arenas are built on top of available allocators
+    const allocator_t *inner_alloc;
+    void        *inner_ctx;
+} multiarena_context_t;
+
+static inline void *multiarena_alloc(void *ctx, const size_t size);
+static inline void *multiarena_realloc(void *ctx, void *ptr, const size_t old_size, const size_t new_size);
+static inline void multiarena_free(void *ctx, void *ptr, const size_t size);
+
+static inline arena_region_t *multi_as_region(multiarena_region_t *multiarena_region);
+static inline multiarena_region_t *multiarena_region_init(size_t ensure_capacity, const allocator_t *allocator, void *inner_ctx);
+static inline void multiarena_free_all(multiarena_context_t *arena);
+
+static inline arena_region_t *multi_as_region(multiarena_region_t *multiarena_region) {
+    arena_region_t *result = NULL;
+
+    if (multiarena_region == NULL) {
+        return result;
+    }
+
+    /* skip the pointer to next */
+    result = (arena_region_t *)((uintptr_t)multiarena_region + sizeof (multiarena_region_t*));
+
+    return result;
+}
+
+static inline multiarena_region_t *multiarena_region_init(size_t ensure_capacity, const allocator_t *allocator, void *inner_ctx) {
+    multiarena_region_t *result = {0};
 
     // Use the maximum between ARENA_CHUNK_DEFAULT_CAP and the argument passed
     size_t init_cap = ARENA_CHUNK_DEFAULT_CAP < ensure_capacity
         ? ensure_capacity
         : ARENA_CHUNK_DEFAULT_CAP;
 
-    size_t alloc_size = sizeof(arena_chunk_t) /* Metadata about the chunk itself */
+    size_t alloc_size = sizeof(multiarena_region_t) /* Metadata about the chunk itself */
         + sizeof(uintptr_t) * init_cap;       /* How much data needs to be stored */
 
-    result = (arena_chunk_t*) allocator->alloc(inner_ctx, alloc_size);
+    result = (multiarena_region_t*) allocator->alloc(inner_ctx, alloc_size);
 
     if (result == NULL) {
         return NULL;
     }
     
     result->capacity = init_cap;
-    result->count = 0;
+    result->offset = 0;
 
     return result;
 }
 
-static void *arena_chunk_bump(arena_chunk_t *chunk, size_t size) {
-    void *result;
-
-    if (chunk->capacity - chunk->count < size) {
-        return NULL;
-    }
-
-    result = chunk->data + chunk->count;
-    chunk->count += size;
-
-    return result;
-}
-
-typedef struct {
-    arena_chunk_t *begin;
-    arena_chunk_t *end;
-
-    // Arenas are built on top of available allocators
-    const allocator_t *inner_alloc;
-    void        *inner_ctx;
-} arena_context_t;
-
-static void *arena_alloc(void *ctx, const size_t size) {
-    arena_context_t *arena = (arena_context_t *)ctx;
+static void *multiarena_alloc(void *ctx, const size_t size) {
+    multiarena_context_t *arena = (multiarena_context_t *)ctx;
     
     // Use the std allocator if it is available and no other allocator was provided
     if (arena->inner_alloc == NULL) {
@@ -136,7 +224,7 @@ static void *arena_alloc(void *ctx, const size_t size) {
     }
 
     if (arena->begin == NULL) {
-        arena->begin = arena_chunk_init(size, arena->inner_alloc, arena->inner_ctx);
+        arena->begin = multiarena_region_init(size, arena->inner_alloc, arena->inner_ctx);
         arena->end = arena->begin;
         arena->end->next = NULL;
     }
@@ -148,7 +236,7 @@ static void *arena_alloc(void *ctx, const size_t size) {
      */
 
     // Try to allocate within an existing chunk
-    void *result = arena_chunk_bump(arena->end, size);
+    void *result = arena_region_bump(multi_as_region(arena->end), size);
     if (result != NULL) {
         // Succesful allocation
         return result;
@@ -160,10 +248,10 @@ static void *arena_alloc(void *ctx, const size_t size) {
         arena->end = arena->end->next;
     }
 
-    arena->end->next = arena_chunk_init(size, arena->inner_alloc, arena->inner_ctx);
+    arena->end->next = multiarena_region_init(size, arena->inner_alloc, arena->inner_ctx);
     arena->end = arena->end->next;
 
-    result = arena_chunk_bump(arena->end, size);
+    result = arena_region_bump(multi_as_region(arena->end), size);
     if (result != NULL) {
         arena->end->next = NULL;
     }
@@ -171,36 +259,36 @@ static void *arena_alloc(void *ctx, const size_t size) {
     return result;
 }
 
-static void *arena_realloc(void *ctx, void *ptr, const size_t old_size, const size_t new_size) {
-    arena_context_t *arena = (arena_context_t *)ctx;
+static inline void *multiarena_realloc(void *ctx, void *ptr, const size_t old_size, const size_t new_size) {
+    multiarena_context_t *arena = (multiarena_context_t *)ctx;
 
     if (new_size == 0) {
         return NULL;
     }
 
     if (ptr == NULL) {
-        return arena_alloc(ctx, new_size);
+        return multiarena_alloc(ctx, new_size);
     }
 
     // Check if the old pointer an existing chunk
-    for (arena_chunk_t *chunk = arena->begin; chunk != NULL; chunk = chunk->next) {
+    for (multiarena_region_t *chunk = arena->begin; chunk != NULL; chunk = chunk->next) {
 
         if ((uintptr_t)ptr >= (uintptr_t)chunk->data && 
             (uintptr_t)ptr < (uintptr_t)(chunk->data + chunk->capacity)) {
             // Pointer is within this chunk
-            size_t remaining_capacity = chunk->capacity - chunk->count;
+            size_t remaining_capacity = chunk->capacity - chunk->offset;
 
             // Check if the old data is at the end of the chunk
-            if ((uintptr_t)ptr + old_size == (uintptr_t)(chunk->data + chunk->count)) {
+            if ((uintptr_t)ptr + old_size == (uintptr_t)(chunk->data + chunk->offset)) {
                 // If new_size fits in the remaining capacity, just adjust the count
                 if (remaining_capacity >= new_size) {
-                    chunk->count += (new_size - old_size); // Adjust count
+                    chunk->offset += (new_size - old_size); // Adjust count
                     return ptr;
                 }
             }
 
             // Allocate new memory if necessary
-            void *new_ptr = arena_alloc(ctx, new_size);
+            void *new_ptr = multiarena_alloc(ctx, new_size);
             if (new_ptr != NULL) {
                 memcpy(new_ptr, ptr, old_size);
                 return new_ptr;
@@ -210,22 +298,20 @@ static void *arena_realloc(void *ctx, void *ptr, const size_t old_size, const si
     }
 
     // Pointer not found in any chunk
-    return arena_alloc(ctx, new_size);
+    return multiarena_alloc(ctx, new_size);
 }
 
-static void arena_free(void *ctx, void *ptr, const size_t size) {
-    UNUSED(ctx);
-    UNUSED(ptr);
-    UNUSED(size);
+static inline void multiarena_free(void *ctx, void *ptr, const size_t size) {
+    arena_free(ctx, ptr,  size);
 }
 
 // Frees all the chunks within the arena. Prefer to use arena_reset
-static void arena_free_all(arena_context_t *arena) {
+static inline void multiarena_free_all(multiarena_context_t *arena) {
 
-    arena_chunk_t *chunk = arena->begin; 
+    multiarena_region_t *chunk = arena->begin; 
     while (chunk != NULL) {
-        arena_chunk_t *next_chunk = chunk->next;
-        arena->inner_alloc->free(arena->inner_ctx, chunk, sizeof(arena_chunk_t) + sizeof(uintptr_t) * chunk->capacity);
+        multiarena_region_t *next_chunk = chunk->next;
+        arena->inner_alloc->free(arena->inner_ctx, chunk, sizeof(multiarena_region_t) + sizeof(uintptr_t) * chunk->capacity);
         chunk = next_chunk;
     }
 
@@ -235,20 +321,20 @@ static void arena_free_all(arena_context_t *arena) {
 
 // Reuse the chunks by overwriting their data.
 // This function does not call inner_alloc->free
-static inline void arena_reset(arena_context_t *arena) {
+static inline void multiarena_reset(multiarena_context_t *multiarena) {
 
-    for (arena_chunk_t *chunk = arena->begin; chunk != NULL; chunk = chunk->next) {
-        chunk->count = 0;
+    for (multiarena_region_t *region = multiarena->begin; region != NULL; region = region->next) {
+        region->offset = 0;
     }
 
-    arena->end = arena->begin;
+    multiarena->end = multiarena->begin;
 }
 
 
-static allocator_t arena_allocator = {
-    .alloc = &arena_alloc,
-    .realloc = &arena_realloc,
-    .free = &arena_free
+static allocator_t multiarena_allocator = {
+    .alloc = &multiarena_alloc,
+    .realloc = &multiarena_realloc,
+    .free = &multiarena_free
 };
 
 #endif /* #ifdef ALLOC_ARENA_IMPL */

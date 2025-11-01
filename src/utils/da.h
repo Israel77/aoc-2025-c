@@ -80,7 +80,7 @@ static void da_reverse(void *array, const array_info_t *info) {
     }
 }
 
-static bool da_equals(const void *array1, const array_info_t *info1,
+static inline bool da_equals(const void *array1, const array_info_t *info1,
         const void *array2, const array_info_t *info2) {
 
     if (info1->count != info2->count) {

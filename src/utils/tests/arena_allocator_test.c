@@ -13,8 +13,8 @@
 static int tests_passed = 0;
 static int tests_failed = 0;
 
-static arena_context_t make_arena(void) {
-    arena_context_t arena = {0};
+static multiarena_context_t make_multiarena(void) {
+    multiarena_context_t arena = {0};
     arena.inner_alloc = &global_std_allocator;   /* std allocator as backing */
     arena.inner_ctx   = NULL;
     return arena;
@@ -24,9 +24,9 @@ static arena_context_t make_arena(void) {
  * Test 1 – primitive allocation
  * ------------------------------------------------------------------------- */
 static void test_primitive(void) {
-    arena_context_t arena = make_arena();
+    multiarena_context_t arena = make_multiarena();
 
-    int *p = (int *)arena_allocator.alloc(&arena, sizeof(int));
+    int *p = (int *)multiarena_allocator.alloc(&arena, sizeof(int));
     if (!p) {
         TEST_FAIL("arena alloc int");
     } else {
@@ -39,19 +39,19 @@ static void test_primitive(void) {
         TEST_OK("arena alloc int");
     }
 
-    arena_allocator.free(&arena, p, sizeof(int));   /* no‑op but allowed */
+    multiarena_allocator.free(&arena, p, sizeof(int));   /* no‑op but allowed */
 
-    arena_free_all(&arena);   /* clean up all chunks */
+    multiarena_free_all(&arena);   /* clean up all chunks */
 }
 
 /* -------------------------------------------------------------------------
  * Test 2 – array allocation and realloc
  * ------------------------------------------------------------------------- */
 static void test_array(void) {
-    arena_context_t arena = make_arena();
+    multiarena_context_t arena = make_multiarena();
 
     const size_t N = 32;
-    double *arr = (double *)arena_allocator.alloc(&arena, N * sizeof(double));
+    double *arr = (double *)multiarena_allocator.alloc(&arena, N * sizeof(double));
     if (!arr) {
         TEST_FAIL("arena alloc array");
     } else {
@@ -69,7 +69,7 @@ static void test_array(void) {
 
     /* Grow the array using arena_realloc (allocates a new block) */
     const size_t M = 64;
-    double *arr2 = (double *)arena_allocator.realloc(&arena, arr,
+    double *arr2 = (double *)multiarena_allocator.realloc(&arena, arr,
                                                    N * sizeof(double),
                                                    M * sizeof(double));
 
@@ -98,9 +98,9 @@ static void test_array(void) {
         TEST_FAIL("arena new region write");
     }
 
-    arena_allocator.free(&arena, arr2, M * sizeof(double));   /* no‑op */
+    multiarena_allocator.free(&arena, arr2, M * sizeof(double));   /* no‑op */
 
-    arena_free_all(&arena);
+    multiarena_free_all(&arena);
 }
 
 typedef struct {
@@ -110,9 +110,9 @@ typedef struct {
 } test_struct_t;
 
 static void test_struct(void) {
-    arena_context_t arena = make_arena();
+    multiarena_context_t arena = make_multiarena();
 
-    test_struct_t *s = (test_struct_t *)arena_allocator.alloc(&arena,
+    test_struct_t *s = (test_struct_t *)multiarena_allocator.alloc(&arena,
                                                              sizeof(test_struct_t));
     if (!s) {
         TEST_FAIL("arena alloc struct");
@@ -126,14 +126,14 @@ static void test_struct(void) {
     if (s->id != 7 || s->f != 2.71f || memcmp(s->name, "arena_test", 0x0B) != 0)
         TEST_FAIL("arena struct fields");
 
-    arena_free_all(&arena);
+    multiarena_free_all(&arena);
 }
 
 /* -------------------------------------------------------------------------
  * Test 4 – multiple chunks, reset, and reuse
  * ------------------------------------------------------------------------- */
 static void test_chunks_reset(void) {
-    arena_context_t arena = make_arena();
+    multiarena_context_t arena = make_multiarena();
 
     /* Force creation of several chunks by allocating many small blocks */
     const size_t block_sz = 256;
@@ -141,7 +141,7 @@ static void test_chunks_reset(void) {
     void *ptrs[blocks_needed];
 
     for (size_t i = 0; i < blocks_needed; ++i) {
-        ptrs[i] = arena_allocator.alloc(&arena, block_sz);
+        ptrs[i] = multiarena_allocator.alloc(&arena, block_sz);
         if (!ptrs[i]) TEST_FAIL("arena alloc multiple chunks");
         memset(ptrs[i], (int)i, block_sz);
     }
@@ -154,10 +154,10 @@ static void test_chunks_reset(void) {
     }
 
     /* Reset the arena – all previously allocated memory becomes reusable */
-    arena_reset(&arena);
+    multiarena_reset(&arena);
 
     /* After reset allocate new objects and ensure they work */
-    int *x = (int *)arena_allocator.alloc(&arena, sizeof(int));
+    int *x = (int *)multiarena_allocator.alloc(&arena, sizeof(int));
     if (!x) {
         TEST_FAIL("arena alloc after reset");
     }
@@ -166,11 +166,11 @@ static void test_chunks_reset(void) {
 
     /* Allocate a larger block to ensure a new chunk can be created again */
     size_t large_sz = 8192;   /* larger than any existing chunk */
-    void *large = arena_allocator.alloc(&arena, large_sz);
+    void *large = multiarena_allocator.alloc(&arena, large_sz);
     if (!large) TEST_FAIL("arena alloc large after reset");
     memset(large, 0xAA, large_sz);
 
-    arena_free_all(&arena);
+    multiarena_free_all(&arena);
 }
 
 /* -------------------------------------------------------------------------
