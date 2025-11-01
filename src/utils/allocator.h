@@ -1,19 +1,19 @@
 #ifndef ALLOCATOR_H
 #define ALLOCATOR_H
 
-// These headers are fairly easy to replace if they're not available, they're mostly for typedefs
+/* These headers are fairly easy to replace if they're not available, they're mostly for typedefs */
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-// Assert is optional, but recommended to guarantee some invariants.
+/* Assert is optional, but recommended to guarantee some invariants. */
 #include <assert.h>
 
-// Importing stdlib is only needed at the top level to define what is size_t
-// and when using the std allocator. If you provide a custom definition of 
-// size_t and don't use the std allocator, there is no need to include it.
-// Example: 
-// #define CUSTOM_SIZE_T
-// typedef uint64_t size_t;
+/* Importing stdlib is only needed at the top level to define what is size_t */
+/* and when using the std allocator. If you provide a custom definition of  */
+/* size_t and don't use the std allocator, there is no need to include it. */
+/* Example:  */
+/* #define CUSTOM_SIZE_T */
+/* typedef uint64_t size_t; */
 #ifndef CUSTOM_SIZE_T
 #include <stdlib.h>
 #endif
@@ -24,7 +24,7 @@
 
 #include "todo.h"
 
-// The basic data structure that represents a generic allocator
+/* The basic data structure that represents a generic allocator */
 typedef struct {
     void *(*alloc)(void *ctx, const size_t size);
     void *(*realloc)(void *ctx, void *ptr, const size_t old_size, const size_t new_size);
@@ -80,7 +80,7 @@ typedef struct {
 } arena_region_t;
 
 typedef struct {
-    // Arenas are built on top of available allocators
+    /* Arenas are built on top of available allocators */
     const allocator_t *inner_alloc;
     void        *inner_ctx;
 
@@ -162,7 +162,7 @@ typedef struct {
     multiarena_region_t *begin;
     multiarena_region_t *end;
 
-    // Arenas are built on top of available allocators
+    /* Arenas are built on top of available allocators */
     const allocator_t *inner_alloc;
     void        *inner_ctx;
 } multiarena_context_t;
@@ -191,7 +191,7 @@ static inline arena_region_t *multi_as_region(multiarena_region_t *multiarena_re
 static inline multiarena_region_t *multiarena_region_init(size_t ensure_capacity, const allocator_t *allocator, void *inner_ctx) {
     multiarena_region_t *result = {0};
 
-    // Use the maximum between ARENA_CHUNK_DEFAULT_CAP and the argument passed
+    /* Use the maximum between ARENA_CHUNK_DEFAULT_CAP and the argument passed */
     size_t init_cap = ARENA_CHUNK_DEFAULT_CAP < ensure_capacity
         ? ensure_capacity
         : ARENA_CHUNK_DEFAULT_CAP;
@@ -214,7 +214,7 @@ static inline multiarena_region_t *multiarena_region_init(size_t ensure_capacity
 static void *multiarena_alloc(void *ctx, const size_t size) {
     multiarena_context_t *arena = (multiarena_context_t *)ctx;
     
-    // Use the std allocator if it is available and no other allocator was provided
+    /* Use the std allocator if it is available and no other allocator was provided */
     if (arena->inner_alloc == NULL) {
 #ifdef ALLOC_STD_IMPL
         arena->inner_alloc = &global_std_allocator;
@@ -235,15 +235,15 @@ static void *multiarena_alloc(void *ctx, const size_t size) {
      * available chunk, rather than always choosing the last chunk.
      */
 
-    // Try to allocate within an existing chunk
+    /* Try to allocate within an existing chunk */
     void *result = arena_region_bump(multi_as_region(arena->end), size);
     if (result != NULL) {
-        // Succesful allocation
+        /* Succesful allocation */
         return result;
     }
 
-    // Create a new chunk otherwise
-    // NOTE: Use a while loop instead of if, to avoid memory leak after using arena_reset
+    /* Create a new chunk otherwise */
+    /* NOTE: Use a while loop instead of if, to avoid memory leak after using arena_reset */
     while (arena->end->next != NULL) {
         arena->end = arena->end->next;
     }
@@ -270,34 +270,34 @@ static inline void *multiarena_realloc(void *ctx, void *ptr, const size_t old_si
         return multiarena_alloc(ctx, new_size);
     }
 
-    // Check if the old pointer an existing chunk
+    /* Check if the old pointer an existing chunk */
     for (multiarena_region_t *chunk = arena->begin; chunk != NULL; chunk = chunk->next) {
 
         if ((uintptr_t)ptr >= (uintptr_t)chunk->data && 
             (uintptr_t)ptr < (uintptr_t)(chunk->data + chunk->capacity)) {
-            // Pointer is within this chunk
+            /* Pointer is within this chunk */
             size_t remaining_capacity = chunk->capacity - chunk->offset;
 
-            // Check if the old data is at the end of the chunk
+            /* Check if the old data is at the end of the chunk */
             if ((uintptr_t)ptr + old_size == (uintptr_t)(chunk->data + chunk->offset)) {
-                // If new_size fits in the remaining capacity, just adjust the count
+                /* If new_size fits in the remaining capacity, just adjust the count */
                 if (remaining_capacity >= new_size) {
-                    chunk->offset += (new_size - old_size); // Adjust count
+                    chunk->offset += (new_size - old_size); /* Adjust count */
                     return ptr;
                 }
             }
 
-            // Allocate new memory if necessary
+            /* Allocate new memory if necessary */
             void *new_ptr = multiarena_alloc(ctx, new_size);
             if (new_ptr != NULL) {
                 memcpy(new_ptr, ptr, old_size);
                 return new_ptr;
             }
-            return NULL; // Allocation failed
+            return NULL; /* Allocation failed */
         }
     }
 
-    // Pointer not found in any chunk
+    /* Pointer not found in any chunk */
     return multiarena_alloc(ctx, new_size);
 }
 
@@ -305,7 +305,7 @@ static inline void multiarena_free(void *ctx, void *ptr, const size_t size) {
     arena_free(ctx, ptr,  size);
 }
 
-// Frees all the chunks within the arena. Prefer to use arena_reset
+/* Frees all the chunks within the arena. Prefer to use arena_reset */
 static inline void multiarena_free_all(multiarena_context_t *arena) {
 
     multiarena_region_t *chunk = arena->begin; 
@@ -319,8 +319,8 @@ static inline void multiarena_free_all(multiarena_context_t *arena) {
     arena->end = NULL;
 }
 
-// Reuse the chunks by overwriting their data.
-// This function does not call inner_alloc->free
+/* Reuse the chunks by overwriting their data. */
+/* This function does not call inner_alloc->free */
 static inline void multiarena_reset(multiarena_context_t *multiarena) {
 
     for (multiarena_region_t *region = multiarena->begin; region != NULL; region = region->next) {
@@ -345,18 +345,18 @@ typedef struct {
     size_t object_size;
     size_t pool_size;
 
-    // Base allocator (only used when initializing and destroying)
+    /* Base allocator (only used when initializing and destroying) */
     const allocator_t *inner_alloc;
     void              *inner_ctx;
 
-    // Arrays
-    bool    *is_free; // track free objects
-    uint8_t *pool;   // store the data
+    /* Arrays */
+    bool    *is_free; /* track free objects */
+    uint8_t *pool;   /* store the data */
 } fixed_pool_context_t;
 
-// Allocates an object and returns its index within the internal pool array.
+/* Allocates an object and returns its index within the internal pool array. */
 static size_t fixed_pool_alloc_by_index(fixed_pool_context_t *pool_ctx) {
-    // Find the next free object
+    /* Find the next free object */
     for (size_t i = 0; i < pool_ctx->pool_size; ++i) {
         if (pool_ctx->is_free[i]) {
             pool_ctx->is_free[i] = false;
@@ -367,7 +367,7 @@ static size_t fixed_pool_alloc_by_index(fixed_pool_context_t *pool_ctx) {
     return (size_t)-1;
 }
 
-// Free an object by passing its index. Unlike other allocators, free is an idempotent function for pools.
+/* Free an object by passing its index. Unlike other allocators, free is an idempotent function for pools. */
 static void fixed_pool_free_by_index(fixed_pool_context_t *pool_ctx, size_t index) {
 
     assert(index < pool_ctx->pool_size && "Invalid index");
@@ -375,33 +375,33 @@ static void fixed_pool_free_by_index(fixed_pool_context_t *pool_ctx, size_t inde
     pool_ctx->is_free[index] = true;
 }
 
-//#region: Allocator interface
+/*#region: Allocator interface */
 static void *fixed_pool_alloc(void *ctx, const size_t size) {
     fixed_pool_context_t *pool_ctx = (fixed_pool_context_t *)ctx;
 
     if (size != pool_ctx->object_size) {
-        return NULL; // Size must match the fixed object size
+        return NULL; /* Size must match the fixed object size */
     }
 
-    // Use the index-based allocation
+    /* Use the index-based allocation */
     size_t index = fixed_pool_alloc_by_index(pool_ctx);
     if (index == (size_t)-1) {
-        return NULL; // Allocation failed
+        return NULL; /* Allocation failed */
     }
 
-    return pool_ctx->pool + (index * pool_ctx->object_size); // Return pointer to the object
+    return pool_ctx->pool + (index * pool_ctx->object_size); /* Return pointer to the object */
 }
 
 static void fixed_pool_free(void *ctx, void *ptr, const size_t size) {
-    // Size is defined by the pool context
+    /* Size is defined by the pool context */
     UNUSED(size);
 
     fixed_pool_context_t *pool_ctx = (fixed_pool_context_t *)ctx;
 
-    // Calculate the index of the object being freed
+    /* Calculate the index of the object being freed */
     size_t index = ((uint8_t *)ptr - pool_ctx->pool) / pool_ctx->object_size;
 
-    // Use assert to check if the index is valid before freeing
+    /* Use assert to check if the index is valid before freeing */
     assert(index < pool_ctx->pool_size && "Invalid index for free operation");
     fixed_pool_free_by_index(pool_ctx, index);
 }
@@ -420,7 +420,7 @@ static void *fixed_pool_realloc(void *ctx, void *ptr, const size_t old_size, con
     UNUSED(old_size);
     return NULL;
 }
-//#endregion: Allocator interface
+/*#endregion: Allocator interface */
 
 static fixed_pool_context_t fixed_pool_init(size_t object_size, size_t pool_size, const allocator_t *allocator, void *ctx) {
 
@@ -433,7 +433,7 @@ static fixed_pool_context_t fixed_pool_init(size_t object_size, size_t pool_size
         .inner_ctx = ctx,
     };
 
-    // Initialize the free list
+    /* Initialize the free list */
     for (size_t i = 0; i < pool_size; ++i) {
         pool_ctx.is_free[i] = true;
     }
@@ -442,9 +442,9 @@ static fixed_pool_context_t fixed_pool_init(size_t object_size, size_t pool_size
 }
 
 static void fixed_pool_free_all(fixed_pool_context_t *pool_ctx) {
-    // Free the data
+    /* Free the data */
     pool_ctx->inner_alloc->free(pool_ctx->inner_ctx, pool_ctx->pool, pool_ctx->object_size * pool_ctx->pool_size );
-    // Free the array storing free indices
+    /* Free the array storing free indices */
     pool_ctx->inner_alloc->free(pool_ctx->inner_ctx, pool_ctx->is_free, sizeof(bool) * pool_ctx->pool_size);
 }
 

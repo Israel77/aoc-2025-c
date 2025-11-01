@@ -69,9 +69,9 @@ static void da_reverse(void *array, const array_info_t *info) {
 
     for (size_t i = 0; i < info->count / 2; ++i) {
         size_t offset = i * info->item_size;
-        // memcpy(temp          , start + offset, info->item_size);
-        // memcpy(start + offset, end - offset  , info->item_size);
-        // memcpy(end - offset  , temp          , info->item_size);
+        /* memcpy(temp          , start + offset, info->item_size); */
+        /* memcpy(start + offset, end - offset  , info->item_size); */
+        /* memcpy(end - offset  , temp          , info->item_size); */
         for (size_t j = 0; j < info->item_size; ++j) {
             temp[j] = start[offset + j];
             start[offset +  j] = *(end - offset + j);

@@ -10,13 +10,15 @@
 #include <stdint.h>
 #include <string.h>
 
-// Base for the bigint representation.
-// By using 2^32 as the base, any u32 can be a "digit"
-// which simplifies some algorithms. (DO NOT MODIFY)
+/* Base for the bigint representation.*/
+/* By using 2^32 as the base, any u32 can be a "digit"*/
+/* which simplifies some algorithms. (DO NOT MODIFY)*/
 static const uint64_t BASE = (1ULL)<<32;
-static const uint8_t LOG_10_BASE = 9; // How many decimal digits
-// static const uint64_t BASE = 100;
-// static const uint8_t LOG_10_BASE = 2; // How many decimal digits
+static const uint8_t LOG_10_BASE = 9;
+/*
+static const uint64_t BASE = 100;
+static const uint8_t LOG_10_BASE = 2; //How many decimal digits
+*/
 
 /*
  * Internal representation of an arbitrary precision integer type.
@@ -26,6 +28,7 @@ static const uint8_t LOG_10_BASE = 9; // How many decimal digits
  *
  * The array {a0, a1, a2...} represents a0 + a1 * BASE + a2 * BASE^2 ...
  */
+
 typedef struct {
     array_info_t array_info;
     uint64_t *items;
@@ -37,30 +40,30 @@ typedef struct {
     bigint_t remainder;
 } divmod_t;
 
-// Instantiation and copying
+/* Instantiation and copying */
 
-// Create a big integer with a given capacity on the underlying array of int64
+/* Create a big integer with a given capacity on the underlying array of int64 */
 bigint_t bigint_with_capacity(size_t capacity, const allocator_t *allocator, void *alloc_ctx);
 
-// Create a big integer from a single 64-bit integer
+/* Create a big integer from a single 64-bit integer */
 bigint_t bigint_from_i64(const int64_t value, const allocator_t *allocator, void *alloc_ctx);
-// Create a big integer from a sized string
+/* Create a big integer from a sized string */
 bigint_t bigint_from_string(const string_t *value, const allocator_t *allocator, void *alloc_ctx, error_t *err);
-// Create a big integer from a null-terminated string
+/* Create a big integer from a null-terminated string */
 bigint_t bigint_from_cstr(const char *value, const allocator_t *allocator, void *alloc_ctx, error_t *err);
-// Copy a big integer into another
+/* Copy a big integer into another */
 void bigint_copy(bigint_t *dst, const bigint_t *src);
 
-// Printing
+/* Printing */
 string_builder_t bigint_to_sb(const bigint_t *num,
-        // Allows the use of a different allocator
-        // than the one used for the bigint itself
+        /* Allows the use of a different allocator */
+        /* than the one used for the bigint itself */
         const allocator_t *str_allocator, void *str_ctx,
-        // The algorithm needs to allocate some temporary memory as well
+        /* The algorithm needs to allocate some temporary memory as well */
         const allocator_t *temp_allocator, void *temp_ctx
         );
 
-// Comparison operations
+/* Comparison operations */
 static inline bool bigint_abs_eq(const bigint_t *num, const bigint_t *other);
 static inline bool bigint_abs_lt(const bigint_t *num, const bigint_t *other);
 static inline bool bigint_abs_gt(const bigint_t *num, const bigint_t *other);
@@ -68,19 +71,19 @@ bool bigint_eq(const bigint_t *num, const bigint_t *other);
 bool bigint_lt(const bigint_t *num, const bigint_t *other);
 bool bigint_gt(const bigint_t *num, const bigint_t *other);
 
-// Special functions
+/* Special functions */
 
-// Remove leading zeroes and convert -0 to 0
+/* Remove leading zeroes and convert -0 to 0 */
 static inline void bigint_normalize(bigint_t *num);
 
-// Operations producing new integers
+/* Operations producing new integers */
 bigint_t bigint_add(const bigint_t *num, const bigint_t *other, const allocator_t *allocator, void *alloc_ctx);
 bigint_t bigint_sub(const bigint_t *num, const bigint_t *other, const allocator_t *allocator, void *alloc_ctx);
 bigint_t bigint_mul(const bigint_t *num, const bigint_t *other, const allocator_t *allocator, void *alloc_ctx);
 
 divmod_t bigint_divmod(const bigint_t *num, const bigint_t *other, const allocator_t *allocator, void *alloc_ctx, error_t *err);
 
-// In-place operations
+/* In-place operations */
 void bigint_increment(bigint_t *num);
 void bigint_decrement(bigint_t *num);
 void bigint_add_in(bigint_t *num, const bigint_t *other);
@@ -109,8 +112,8 @@ bigint_t bigint_with_capacity(size_t capacity, const allocator_t *allocator, voi
 
 bigint_t bigint_from_i64(const int64_t value, const allocator_t *allocator, void *alloc_ctx) {
 
-    // Only one digit is needed, but start with capacity 16 to avoid too much overhead
-    // when doing operations
+    /* Only one digit is needed, but start with capacity 16 to avoid too much overhead */
+    /* when doing operations */
     bigint_t result = bigint_with_capacity(16, allocator, alloc_ctx);
 
     result.is_negative = value < 0;
@@ -128,7 +131,7 @@ bigint_t bigint_from_string(const string_t *str, const allocator_t *allocator, v
 
     bigint_t result = bigint_with_capacity((str->count / LOG_10_BASE) + 1, allocator, alloc_ctx);
 
-    // If the string is empty return 0
+    /* If the string is empty return 0 */
     if (str->count == 0) {
         return result;
     }
@@ -147,14 +150,14 @@ bigint_t bigint_from_string(const string_t *str, const allocator_t *allocator, v
         ++i;
     }
 
-    // For small enough numbers, just parse as an u32
+    /* For small enough numbers, just parse as an u32 */
     if (str->count < LOG_10_BASE) {
-        // Advance the string view if necessary
+        /* Advance the string view if necessary */
         const string_t updated_view = {
             .chars = &str->chars[i],
             .count = str->count - i,
         };
-        // This casting is safe because of the above check, as long as BASE <= UINT32_MAX
+        /* This casting is safe because of the above check, as long as BASE <= UINT32_MAX */
         uint64_t value_u64 = (uint64_t)(string_parse_u64_safe(&updated_view, err) % BASE);
 
         result.items = da_append(result.items, &result.array_info, &value_u64);
@@ -174,11 +177,11 @@ bigint_t bigint_from_string(const string_t *str, const allocator_t *allocator, v
 
         char digit = str->chars[i] - '0';
 
-        // Multiply by 10 and propagate the carry
+        /* Multiply by 10 and propagate the carry */
         uint64_t carry = digit;
         for (size_t j=0; j < result.array_info.count; ++j) {
             uint64_t prod = ((uint64_t)result.items[j]) * 10 + carry;
-            // The lower bits become the new "digit" (on the internal base)
+            /* The lower bits become the new "digit" (on the internal base) */
             result.items[j] = prod % BASE; 
             carry = prod / BASE;
         }
@@ -200,9 +203,9 @@ bigint_t bigint_from_cstr(const char *value, const allocator_t *allocator, void 
 }
 
 void bigint_copy(bigint_t *dst, const bigint_t *src) {
-    // @sneaky_allocation
+    /* @sneaky_allocation */
     dst->items = da_reserve(dst->items, &dst->array_info, src->array_info.capacity);
-    // memcpy(dst->items, src->items, (src->array_info.count) * sizeof (*dst->items));
+    /* memcpy(dst->items, src->items, (src->array_info.count) * sizeof (*dst->items)); */
     for (size_t i = 0; i < src->array_info.count; ++i) {
         dst->items[i] = src->items[i];
     }
@@ -212,9 +215,9 @@ void bigint_copy(bigint_t *dst, const bigint_t *src) {
 }
 
 string_builder_t bigint_to_sb(const bigint_t *num, 
-        // Allocator for the memory of the returned string
+        /* Allocator for the memory of the returned string */
         const allocator_t *str_alloc, void *str_ctx,
-        // Allocator for temporary memory used in the subroutine
+        /* Allocator for temporary memory used in the subroutine */
         const allocator_t *temp_alloc, void *temp_ctx
         ) {
     string_builder_t sb = {
@@ -230,13 +233,13 @@ string_builder_t bigint_to_sb(const bigint_t *num,
         return sb;
     }
 
-    // Upper bound: 9 digits per segment on the internal array
+    /* Upper bound: 9 digits per segment on the internal array */
     sb.items = da_reserve( sb.items, &sb.array_info, num->array_info.count * 9);
 
     bigint_t working_copy = bigint_with_capacity(num->array_info.count, temp_alloc, temp_ctx);
     bigint_copy(&working_copy, num);
 
-    // Revert the working_copy, as it is easier to make the conversion if it is in big endian
+    /* Revert the working_copy, as it is easier to make the conversion if it is in big endian */
     da_reverse(working_copy.items, &working_copy.array_info);
 
     bigint_t quotient = bigint_with_capacity(working_copy.array_info.capacity, working_copy.array_info.allocator, working_copy.array_info.alloc_ctx);
@@ -245,8 +248,8 @@ string_builder_t bigint_to_sb(const bigint_t *num,
         uint64_t carry = 0;
 
         for (size_t i = 0; i < working_copy.array_info.count; ++i) {
-            // a0 * b^n + a1 * b^(n-1) = (a0 * b + a1) * b^(n-1)
-            // uint64_t temp = (carry << 32) | working_copy.items[i];
+            /* a0 * b^n + a1 * b^(n-1) = (a0 * b + a1) * b^(n-1) */
+            /* uint64_t temp = (carry << 32) | working_copy.items[i]; */
             uint64_t temp = carry * BASE + working_copy.items[i];
             uint64_t q = temp / 10;
             carry = temp % 10;
@@ -256,7 +259,7 @@ string_builder_t bigint_to_sb(const bigint_t *num,
         }
 
         sb_append_char(&sb, (char)carry + '0');
-        // @TODO: Simplify the copy logic (maybe get rid of quotient)
+        /* @TODO: Simplify the copy logic (maybe get rid of quotient) */
         if (working_copy.items != quotient.items) {
             da_free(working_copy.items, &working_copy.array_info);
         }
@@ -269,9 +272,8 @@ string_builder_t bigint_to_sb(const bigint_t *num,
         sb_append_char(&sb, '-');
     }
 
-    // The decimal number representation is inverted
+    /* The decimal number representation is inverted */
     da_reverse(sb.items, &sb.array_info);
-
 
     da_free(quotient.items, &quotient.array_info);
 
@@ -302,10 +304,10 @@ bool bigint_eq(const bigint_t *num, const bigint_t *other) {
     return bigint_abs_eq(num, other);
 }
 
-// Compares the absolute value of two numbers
+/* Compares the absolute value of two numbers */
 static inline bool bigint_abs_lt(const bigint_t *num, const bigint_t *other) {
 
-    // If the magnitudes are different there is no need to compare the digits
+    /* If the magnitudes are different there is no need to compare the digits */
     if (num->array_info.count < other->array_info.count) {
         return true;
     }
@@ -314,20 +316,20 @@ static inline bool bigint_abs_lt(const bigint_t *num, const bigint_t *other) {
         return false;
     }
 
-    // Iterate from most significant to least significant
+    /* Iterate from most significant to least significant */
     for (size_t i = num->array_info.count; i > 0; --i) {
-        // As soon as the digits are different, return the comparison of digits
+        /* As soon as the digits are different, return the comparison of digits */
         if (num->items[i-1] != other->items[i-1]) {
             return (num->items[i-1] < other->items[i-1]);
         }
     }
 
-    // This would mean all digits are equal
+    /* This would mean all digits are equal */
     return false;
 }
 
 static inline bool bigint_abs_gt(const bigint_t *num, const bigint_t *other) {
-    // If the magnitudes are different there is no need to compare the digits
+    /* If the magnitudes are different there is no need to compare the digits */
     if (num->array_info.count > other->array_info.count) {
         return true;
     }
@@ -336,28 +338,28 @@ static inline bool bigint_abs_gt(const bigint_t *num, const bigint_t *other) {
         return false;
     }
 
-    // Iterate from most significant to least significant
+    /* Iterate from most significant to least significant */
     for (size_t i = num->array_info.count; i > 0; --i) {
-        // As soon as the digits are different, return the comparison of digits
+        /* As soon as the digits are different, return the comparison of digits */
         if (num->items[i-1] != other->items[i-1]) {
             return (num->items[i-1] > other->items[i-1]);
         }
     }
 
-    // This would mean all digits are equal
+    /* This would mean all digits are equal */
     return false;
 }
 
 bool bigint_lt(const bigint_t *num, const bigint_t *other) {
 
-    // If the signs are different, the positive one is bigger
+    /* If the signs are different, the positive one is bigger */
     if (num->is_negative && !other->is_negative) {
         return true;
     } else if (!num->is_negative && other->is_negative) {
         return false;
     }
 
-    // If they're positive, check which one has the lesser absolute value
+    /* If they're positive, check which one has the lesser absolute value */
     if (!num->is_negative) {
         return bigint_abs_lt(num, other);
     } else {
@@ -367,14 +369,14 @@ bool bigint_lt(const bigint_t *num, const bigint_t *other) {
 
 bool bigint_gt(const bigint_t *num, const bigint_t *other) {
 
-    // If the signs are different, the positive one is bigger
+    /* If the signs are different, the positive one is bigger */
     if (num->is_negative && !other->is_negative) {
         return false;
     } else if (!num->is_negative && other->is_negative) {
         return true;
     }
 
-    // If they're positive, check which one has the greater absolute value
+    /* If they're positive, check which one has the greater absolute value */
     if (!num->is_negative) {
         return bigint_abs_gt(num, other);
     } else {
@@ -397,7 +399,7 @@ static inline void bigint_normalize(bigint_t *num) {
         num->is_negative = false;
     }
 }
-// Performs the addition algorithm on the digits, regardless of the sign of the operators
+/* Performs the addition algorithm on the digits, regardless of the sign of the operators */
 static inline void __bigint_add_helper(bigint_t *num, const bigint_t *other) {
 
     size_t max_count = num->array_info.count > other->array_info.count ? num->array_info.count : other->array_info.count;
@@ -425,7 +427,7 @@ static inline void __bigint_add_helper(bigint_t *num, const bigint_t *other) {
     }
 }
 
-// Performs the subtraction algorithm on the digits and flips the sign of the first if needed.
+/* Performs the subtraction algorithm on the digits and flips the sign of the first if needed. */
 static inline void __bigint_sub_helper(bigint_t *num, const bigint_t *other) {
 
     if (bigint_eq(num, other)) {
@@ -437,7 +439,7 @@ static inline void __bigint_sub_helper(bigint_t *num, const bigint_t *other) {
     if (bigint_abs_gt(num, other)) {
         for (size_t i = 0; i < num->array_info.count; ++i) {
             uint64_t current_num = num->items[i];
-            // uint32_t current_other = i < other->count ? other->items[i] : 0;
+            /* uint32_t current_other = i < other->count ? other->items[i] : 0; */
             uint32_t current_other = (i < other->array_info.count) * other->items[i];
 
             if (current_num < current_other) {
@@ -453,14 +455,14 @@ static inline void __bigint_sub_helper(bigint_t *num, const bigint_t *other) {
         }
 
     } else {
-        //@todo: Check if we can avoid this allocation when doing reciprocal subtraction
+        /*@todo: Check if we can avoid this allocation when doing reciprocal subtraction */
         bigint_t temp = bigint_with_capacity(other->array_info.count, num->array_info.allocator, num->array_info.alloc_ctx);
         bigint_copy(&temp, other);
 
-        // Swap the inputs of the algorithm and flip the sign of the result
+        /* Swap the inputs of the algorithm and flip the sign of the result */
         for (size_t i = 0; i < temp.array_info.count; ++i) {
             uint64_t current_other = temp.items[i];
-            // uint32_t current_num = i < num->count ? num->items[i] : 0;
+            /* uint32_t current_num = i < num->count ? num->items[i] : 0; */
             uint32_t current_num = (i < num->array_info.count) * num->items[i];
 
 
@@ -483,10 +485,10 @@ static inline void __bigint_sub_helper(bigint_t *num, const bigint_t *other) {
             }
         }
 
-        // Flip the sign
+        /* Flip the sign */
         num->is_negative = (!num->is_negative);
 
-        // Clean up temporary allocation
+        /* Clean up temporary allocation */
         da_free(temp.items, &temp.array_info);
     }
 }
@@ -515,24 +517,24 @@ void bigint_sub_in(bigint_t *num, const bigint_t *other) {
 
 void bigint_mul_in(bigint_t *num, const bigint_t *other) {
 
-    // The general idea is to store the product in memory after
-    // the current num, then replace num with the product:
-    // [num] -> [num|prod] -> [prod]
-    size_t needed_capacity = 2 * num->array_info.count + other->array_info.count; // num_count + (num_count + other_count)
+    /* The general idea is to store the product in memory after */
+    /* the current num, then replace num with the product: */
+    /* [num] -> [num|prod] -> [prod] */
+    size_t needed_capacity = 2 * num->array_info.count + other->array_info.count; /* num_count + (num_count + other_count) */
 
-    // Reserve the capacity for the product after the number itself (extend and reuse the pointer)
-    // @sneaky_allocation
+    /* Reserve the capacity for the product after the number itself (extend and reuse the pointer) */
+    /* @sneaky_allocation */
     num->items = da_reserve(num->items, &num->array_info, needed_capacity);
 
-    // Store the original num_count
+    /* Store the original num_count */
     size_t num_count = num->array_info.count;
 
-    // Make sure everything after the count is zeroed
+    /* Make sure everything after the count is zeroed */
     for (size_t i = num->array_info.count; i < needed_capacity; ++i) {
         num->items[i] = 0;
     }
 
-    // Start of the product
+    /* Start of the product */
     size_t prod_start_idx = num->array_info.count;
     size_t prod_count;
 
@@ -549,7 +551,7 @@ void bigint_mul_in(bigint_t *num, const bigint_t *other) {
             num->items[offset] = prod % BASE;
             carry = prod / BASE;
 
-            // branchless code
+            /* branchless code */
             prod_count = i + j + 1;
         }
         if (carry > 0) {
@@ -558,7 +560,7 @@ void bigint_mul_in(bigint_t *num, const bigint_t *other) {
         }
     }
 
-    // Copy the product back to the start of the number
+    /* Copy the product back to the start of the number */
     for (size_t i = 0; i < prod_count; ++i) {
         num->items[i] = num->items[prod_start_idx + i];
     }
@@ -571,11 +573,11 @@ void bigint_mul_in(bigint_t *num, const bigint_t *other) {
 
 void bigint_mul_in_u64(bigint_t *num, const uint64_t other) {
 
-    // Reserve the capacity for an extra item
+    /* Reserve the capacity for an extra item */
     num->items = da_reserve(num->items, &num->array_info, num->array_info.count + 1);
     num->items[num->array_info.count] = 0;
 
-    // Store the original num_count
+    /* Store the original num_count */
     size_t num_count = num->array_info.count;
 
 
@@ -637,7 +639,7 @@ divmod_t bigint_divmod(const bigint_t *dividend, const bigint_t *divisor, const 
         return result;
     }
 
-    // Create a non-negative version of the divisor to help calculate some operations
+    /* Create a non-negative version of the divisor to help calculate some operations */
     const bigint_t abs_divisor = {
         .is_negative = false,
         .array_info = divisor->array_info,
@@ -648,33 +650,33 @@ divmod_t bigint_divmod(const bigint_t *dividend, const bigint_t *divisor, const 
 
     for (size_t j = dividend->array_info.count; j > 0; --j) {
 
-        // [ _ _ _ _ _ _ _]
-        //                 ^j
-        // Define the window for each division step
-        // [ _ _ _ _ _ |_ _| ]
-        //              ^start
-        // [ _ _ _ _ _ |_ _|]
-        //                ^end
+        /* [ _ _ _ _ _ _ _] */
+        /*                 ^j */
+        /* Define the window for each division step */
+        /* [ _ _ _ _ _ |_ _| ] */
+        /*              ^start */
+        /* [ _ _ _ _ _ |_ _|] */
+        /*                ^end */
         size_t start;
         size_t end = j - 1;
 
 
         if (j == dividend->array_info.count) {
-            // On the first iteration, the window can take more than one digit
+            /* On the first iteration, the window can take more than one digit */
             start = end >= divisor->array_info.count
                 ? (end - divisor->array_info.count) + 1
                 : 0;
             j = start+1;
         } else {
-            // Every subsequent iteration only takes one digit at a time
+            /* Every subsequent iteration only takes one digit at a time */
             start = end;
         }
 
 
         bigint_mul_in_u64(&result.remainder, BASE);
-        // Multiply the remainder by the base and add it to the next slice
-        // The trick here is to use the memory space reserved by the remainder
-        // to store the slice and use it to calculate the next remainder
+        /* Multiply the remainder by the base and add it to the next slice */
+        /* The trick here is to use the memory space reserved by the remainder */
+        /* to store the slice and use it to calculate the next remainder */
         uint32_t remainder_carry = 0;
         for (size_t i = start; i <= end; ++i) { 
             uint64_t sum = remainder_carry;            
@@ -691,9 +693,9 @@ divmod_t bigint_divmod(const bigint_t *dividend, const bigint_t *divisor, const 
         }
 
 
-        // Find the greatest multiple of the divisor that is less then the dividend slice
+        /* Find the greatest multiple of the divisor that is less then the dividend slice */
         uint64_t factor;
-        // Do a binary search to find the correct factor
+        /* Do a binary search to find the correct factor */
         uint64_t low  = 0;
         uint64_t high = BASE;
         while (low < high) {
@@ -711,14 +713,14 @@ divmod_t bigint_divmod(const bigint_t *dividend, const bigint_t *divisor, const 
         }
         /* This quotient will be at most off by one */
         if (bigint_abs_gt(&temp, &result.remainder)) {
-            // bigint_copy(&temp, divisor);
-            // bigint_mul_in_u64(&temp, --factor);
+            /* bigint_copy(&temp, divisor); */
+            /* bigint_mul_in_u64(&temp, --factor); */
             bigint_sub_in(&temp, &abs_divisor);
             --factor;
         }
 
-        // Subtract the temporary multiplication from the slice to get the new remainder
-        // Equivalent of bigint_sub_in(&result.remainder, &temp) but disconsidering the sign
+        /* Subtract the temporary multiplication from the slice to get the new remainder */
+        /* Equivalent of bigint_sub_in(&result.remainder, &temp) but disconsidering the sign */
         for (size_t i = 0; i < result.remainder.array_info.count; ++i) {
             uint64_t current_num = result.remainder.items[i];
             uint64_t current_other = (i < temp.array_info.count) * temp.items[i];
@@ -735,22 +737,22 @@ divmod_t bigint_divmod(const bigint_t *dividend, const bigint_t *divisor, const 
             result.remainder.items[i] = (current_num - current_other) % BASE;
         }
 
-        // Append the factor to the quotient (at this point the quotient array is in reverse order)
+        /* Append the factor to the quotient (at this point the quotient array is in reverse order) */
         da_append(result.quotient.items, &result.quotient.array_info, &factor);
     }
     
-    // Reverse the quotient items to make it little-endian
+    /* Reverse the quotient items to make it little-endian */
     da_reverse(result.quotient.items, &result.quotient.array_info);
     bigint_normalize(&result.remainder);
 
-    // Sign shenaningans
+    /* Sign shenaningans */
     if (dividend->is_negative != divisor->is_negative) {
         result.quotient.is_negative = true;
         bigint_decrement(&result.quotient);
         bigint_sub_in(&result.remainder, &abs_divisor);
     }
 
-    // The remainder can only be negative if the divisor is negative
+    /* The remainder can only be negative if the divisor is negative */
     result.remainder.is_negative = divisor->is_negative && result.remainder.array_info.count > 0;
 
     bigint_normalize(&result.quotient);
@@ -759,7 +761,7 @@ divmod_t bigint_divmod(const bigint_t *dividend, const bigint_t *divisor, const 
     return result;
 };
 
-// Increment the absolute value ignoring the sign
+/* Increment the absolute value ignoring the sign */
 static void __bigint_decrement_helper(bigint_t *num) {
     size_t curr_idx = 0;
     while (num->items[curr_idx] == 0) {
@@ -768,7 +770,7 @@ static void __bigint_decrement_helper(bigint_t *num) {
     num->items[curr_idx] -= 1;
 }
 
-// Decrement the absolute value ignoring the sign
+/* Decrement the absolute value ignoring the sign */
 static void __bigint_increment_helper(bigint_t *num) {
     size_t curr_idx = 0;
     while (num->items[curr_idx] == (BASE - 1)) {

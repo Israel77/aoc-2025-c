@@ -52,7 +52,7 @@ static void test_encoding_decoding() {
 
         string_t str = sb_build(&sb);
 
-        // string_println(&str);
+        /* string_println(&str); */
 
         ok &= string_equals(&str, &sized_value); 
 
@@ -92,11 +92,11 @@ static void test_addition() {
         printf("%s\n", err.error_msg);
     }
 
-    // Reset result for the next test
+    /* Reset result for the next test */
     da_free(expected_result.items, &expected_result.array_info);
 
-    // Test adding a small negative integer
-    expected_result = bigint_from_cstr("1", &global_std_allocator, NULL, &err); // 256 + (-255) = 1
+    /* Test adding a small negative integer */
+    expected_result = bigint_from_cstr("1", &global_std_allocator, NULL, &err); /* 256 + (-255) = 1 */
     bigint_add_in(&result, &small_negative);
     if (bigint_eq(&expected_result, &result)) {
         TEST_OK("Add positive and negative integers");
@@ -105,13 +105,13 @@ static void test_addition() {
         printf("%s\n", err.error_msg);
     }
     
-    // Reset result for the next test
+    /* Reset result for the next test */
     result.array_info.count = 0;
     bigint_normalize(&result);
     da_free(expected_result.items, &expected_result.array_info);
 
-    // Test adding a big positive integer
-    expected_result = bigint_from_cstr("100000000000", &global_std_allocator, NULL, &err); // 0 + 100000000000 = 100000000000
+    /* Test adding a big positive integer */
+    expected_result = bigint_from_cstr("100000000000", &global_std_allocator, NULL, &err); /* 0 + 100000000000 = 100000000000 */
     bigint_add_in(&result, &big_positive);
     if (bigint_eq(&expected_result, &result)) {
         TEST_OK("Add big positive integer");
@@ -120,13 +120,13 @@ static void test_addition() {
         printf("%s\n", err.error_msg);
     }
     
-    // Reset result for the next test
+    /* Reset result for the next test */
     result.array_info.count = 0;
     bigint_normalize(&result);
     da_free(expected_result.items, &expected_result.array_info);
 
-    // Test adding a big negative integer
-    expected_result = bigint_from_cstr("-10000000000", &global_std_allocator, NULL, &err); // 0 + (-10000000000) = -10000000000
+    /* Test adding a big negative integer */
+    expected_result = bigint_from_cstr("-10000000000", &global_std_allocator, NULL, &err); /* 0 + (-10000000000) = -10000000000 */
     bigint_add_in(&result, &big_negative);
     if (bigint_eq(&expected_result, &result)) {
         TEST_OK("Add big negative integer");
@@ -151,7 +151,7 @@ static void test_subtraction() {
 
     bigint_t num1, num2, result, expected_result;
 
-    // minuend|subtrahend|result
+    /* minuend|subtrahend|result */
     const char *calculations[] = {
         "-869778674252","241477624685", "-1111256298937",
         "368181377157","999150299902", "-630968922745",
@@ -204,7 +204,7 @@ static void test_subtraction() {
         multiarena_reset(&test_ctx);
     }
 
-    // Clean up
+    /* Clean up */
     multiarena_free_all(&test_ctx);
 }
 
@@ -281,10 +281,8 @@ static void test_division() {
 
     bigint_t num1, num2;
     divmod_t expected, actual;
-    /*
-     */
 
-    // dividend|divisor|quotient|remainder
+    /* dividend|divisor|quotient|remainder */
     const char *positive_by_positive[] = {
         "57197825656076", "789372", "72459912", "812",
         "199199199199199199199199199199","2727272727","73039706380343677011","202020202",
