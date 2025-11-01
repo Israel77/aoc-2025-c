@@ -321,14 +321,17 @@ static void fixed_pool_free(void *ctx, void *ptr, const size_t size) {
 }
 
 static void *fixed_pool_realloc(void *ctx, void *ptr, const size_t old_size, const size_t new_size) {
-    // Reallocation is not supported in a fixed pool allocator
+
+    /* If the pointer is null, behave like alloc */
+    if (ptr == NULL) {
+        return fixed_pool_alloc(ctx, new_size);
+    }
+
+    /* Reallocation is not supported in a fixed pool allocator */
 #ifdef DEBUG_MODE
     assert(NULL && "You tried to reallocate using a fixed pool allocator");
 #endif
-    UNUSED(ctx);
-    UNUSED(ptr);
     UNUSED(old_size);
-    UNUSED(new_size);
     return NULL;
 }
 //#endregion: Allocator interface
