@@ -260,12 +260,9 @@ static void test_sb_reversion() {
 
     string_builder_t base = sb_from_cstr("123456789", a, &ctx);
     string_builder_t rev = sb_from_cstr("987654321", a, &ctx);
-    da_reverse(rev.items, &rev.array_info);
+    da_reverse(base.items, &base.array_info);
 
-    string_t base_str = sb_build(&base);
-    string_t rev_str  = sb_build(&rev);
-    
-    bool ok = string_equals(&base_str, &rev_str);
+    bool ok = da_equals(base.items, &base.array_info, rev.items, &rev.array_info);
 
     if (ok) TEST_OK("string buffer can be reversed");
     else    TEST_FAIL("string buffer reversion did not work");

@@ -2,6 +2,7 @@
 #define DA_H
 
 #include "allocator.h"
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -77,6 +78,52 @@ static void da_reverse(void *array, const array_info_t *info) {
             *(end - offset + j) = temp[j];
         }
     }
+}
+
+static bool da_equals(const void *array1, const array_info_t *info1,
+        const void *array2, const array_info_t *info2) {
+
+    if (info1->count != info2->count) {
+        return false;
+    }
+
+    if (info1->item_size != info2->item_size) {
+        return false;
+    }
+
+    /* memcmp(array1, array2, info->item_size); */
+    
+    /* Calculate how many 64-bit registers fit into each item */
+    size_t word_size = sizeof (uint64_t);
+
+    size_t words_per_item = info1->item_size / word_size;
+    size_t tail_bytes = info1->item_size % word_size;
+
+    for (size_t i = 0; i < (info1->count * info1->item_size); i += info1->item_size) {
+
+        const uint8_t *p1 = (uint8_t*)array1 + i;
+        const uint8_t *p2 = (uint8_t*)array2 + i;
+
+        /* Optimized check for 64-bit architecture */
+        const uint64_t *w1 = (uint64_t *)p1;
+        const uint64_t *w2 = (uint64_t *)p2;
+        for (size_t word = 0; word < words_per_item; ++word) {
+            if (w1[word] != w2[word]) {
+                return false;
+            }
+        }
+
+        /* Check the remaining bytes */
+        const uint8_t *b1 = p1 + words_per_item * sizeof (uint64_t);
+        const uint8_t *b2 = p2 + words_per_item * sizeof (uint64_t);
+        for (size_t byte = 0; byte < tail_bytes; ++byte) {
+            if (b1[byte] != b2[byte]) {
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 static void da_free(void *array, array_info_t *info) {
