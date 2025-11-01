@@ -259,7 +259,7 @@ static void test_sb_reversion() {
     arena_context_t ctx = {.inner_alloc = &global_std_allocator, .inner_ctx = NULL};
 
     string_builder_t base = sb_from_cstr("123456789", a, &ctx);
-    string_builder_t rev = sb_from_cstr("123456789", a, &ctx);
+    string_builder_t rev = sb_from_cstr("987654321", a, &ctx);
     da_reverse(rev.items, &rev.array_info);
 
     string_t base_str = sb_build(&base);
@@ -267,8 +267,8 @@ static void test_sb_reversion() {
     
     bool ok = string_equals(&base_str, &rev_str);
 
-    if (ok) TEST_OK("string_parse_i64_unsafe parses correctly");
-    else    TEST_FAIL("string_parse_i64_unsafe did not work");
+    if (ok) TEST_OK("string buffer can be reversed");
+    else    TEST_FAIL("string buffer reversion did not work");
 
     arena_free_all(&ctx);
 }
