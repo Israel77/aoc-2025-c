@@ -70,32 +70,139 @@ static const allocator_t global_std_allocator = {
 #include <string.h>
 #include <stdbool.h>
 
-/* Single region arena_allocator */
-
+/*
+ * Single region arena allocator. This allocator does not owns the memory of the underlying
+ * buffer, the clean-up must be done by the caller.
+ */
 typedef struct {
     size_t offset;
     size_t capacity;
 
-    uintptr_t data[];
-} arena_region_t;
-
-typedef struct {
-    /* Arenas are built on top of available allocators */
-    const allocator_t *inner_alloc;
-    void        *inner_ctx;
-
-    arena_region_t region;
+    uint8_t data[];
 } arena_context_t;
 
+/*
+ * Initializes an arena allocator that operates on a single contiguous
+ * memory region supplied by the caller. The arena does not perform any
+ * internal allocations; it simply tracks an offset into the provided
+ * buffer.
+ *
+ * @buf       - Pointer to the start of the memory region that will back the arena.
+ * @capacity  - Size of the region in bytes. Must be a multiple of sizeof(uintptr_t).
+ *
+ * Returns:
+ *     Pointer to a newly‑initialized arena_context_t that references @buf.
+ *     The returned pointer will be the same as @buf, with the arena metadata
+ *     inserted at the start of the buffer. The arena does not own the memory;
+ *     the caller must ensure the buffer remains valid for the arena's lifetime.
+ */
+static inline arena_context_t *arena_init(uintptr_t *buf, size_t capacity);
+
+/*
+ * Allocates a block of @size bytes from the arena. The allocation is
+ * performed by bumping the arena's offset; no per‑allocation metadata is
+ * stored, so the returned pointer is only valid until the arena is reset
+ * or freed.
+ *
+ * @ctx   - Pointer to an arena_context_t returned by arena_init().
+ * @size  - Number of bytes to allocate. Must be > 0.
+ *
+ * Returns:
+ *     Pointer to @size bytes within the arena, or NULL if there is not
+ *     enough remaining capacity.
+ */
 static inline void *arena_alloc(void *ctx, const size_t size);
-static inline void *arena_realloc(void *ctx, void *ptr, const size_t old_size, const size_t new_size);
+
+/*
+ * Reallocates a previously allocated block to a new size. Because the
+ * arena uses a simple bump allocator, the operation can only succeed
+ * without moving the block when the original block is the most recent
+ * allocation and there is sufficient remaining capacity.
+ *
+ * If the block was not the most recently allocated, but there is enough
+ * remaining capacity to store the desired size, it will be copied as if
+ * an arena_alloc followed by memcpy was performed.
+ *
+ * @ctx       - Pointer to an arena_context_t.
+ * @ptr       - Pointer returned by a prior arena_alloc() or arena_realloc().
+ * @old_size  - Original size of the allocation.
+ * @new_size  - Desired new size.
+ *
+ * Returns:
+ *     Pointer to a block of @new_size bytes (which may be the same as @ptr)
+ *     or NULL if there is no remaining capacity. The original block remains
+ *     unchanged.
+ */
+static inline void *arena_realloc(void *ctx, void *ptr,
+                                 const size_t old_size,
+                                 const size_t new_size);
+
+/*
+ * Frees a block allocated from the arena. Since the arena is a bump
+ * allocator, individual frees are no‑ops; the function exists for API
+ * symmetry.
+ *
+ * @ctx   - Pointer to an arena_context_t.
+ * @ptr   - Pointer returned by arena_alloc() or arena_realloc().
+ * @size  - Size of the allocation being freed.
+ */
 static inline void arena_free(void *ctx, void *ptr, const size_t size);
 
-static inline void *arena_region_bump_aligned(arena_region_t *region, size_t size, size_t alignment);
-static inline void *arena_region_bump(arena_region_t *region, size_t size);
-static inline void arena_free_all(arena_context_t *arena);
+/*
+ * Bumps the arena's offset by @size bytes, returning a pointer that is
+ * aligned to @alignment. The alignment must be a power of two.
+ *
+ * @ctx        - Pointer to an arena_context_t.
+ * @size       - Number of bytes to allocate.
+ * @alignment  - Desired alignment (e.g., 8, 16, 32).
+ *
+ * Returns:
+ *     Aligned pointer within the arena, or NULL if the allocation would
+ *     exceed the arena's capacity.
+ */
+static inline void *arena_region_bump_aligned(arena_context_t *ctx,
+                                             size_t size,
+                                             size_t alignment);
 
-static inline void *arena_region_bump_aligned(arena_region_t *region, size_t size, size_t alignment) {
+/*
+ * Simple bump allocation without any alignment guarantees beyond the
+ * natural alignment of the underlying type.
+ *
+ * @ctx   - Pointer to an arena_context_t.
+ * @size  - Number of bytes to allocate.
+ *
+ * Returns:
+ *     Pointer to @size bytes within the arena, or NULL if insufficient
+ *     space remains.
+ */
+static inline void *arena_region_bump(arena_context_t *ctx, size_t size);
+
+/*
+ * Resets a single‑region arena to an empty state. The arena's offset is
+ * set back to zero, allowing the same memory buffer to be reused for
+ * new allocations. No deallocation is performed; the backing buffer
+ * remains owned by the caller.
+ *
+ * @ctx - Pointer to the arena_context_t to be reset.
+ *
+ * Returns:
+ *     Nothing.
+ */
+static inline void arena_reset(arena_context_t *ctx);
+
+
+static inline arena_context_t *arena_init(uintptr_t *buf, size_t capacity) {
+
+    /* Remaining capacity in the buffer after storing metadata about the arena */
+    size_t remaining_cap = capacity - 2 * sizeof (size_t);
+
+    ((size_t *)buf)[0] = 0; /* offset */
+    ((size_t *)buf)[1] = remaining_cap; /* capacity */
+
+    return (arena_context_t *)buf;
+}
+
+static inline void *arena_region_bump_aligned(arena_context_t *region, size_t size, size_t alignment) {
     void *result = NULL;
 
     assert(((alignment & (alignment - 1)) == 0)
@@ -119,7 +226,7 @@ static inline void *arena_region_bump_aligned(arena_region_t *region, size_t siz
     return result;
 }
 
-static inline void *arena_region_bump(arena_region_t *region, size_t size) {
+static inline void *arena_region_bump(arena_context_t *region, size_t size) {
     void *result;
 
     if (region->capacity - region->offset < size) {
@@ -132,14 +239,24 @@ static inline void *arena_region_bump(arena_region_t *region, size_t size) {
     return result;
 }
 
+static inline void arena_reset(arena_context_t *ctx) {
+    ctx->offset = 0;
+}
+
 static inline void *arena_alloc(void *ctx, const size_t size) {
     return arena_region_bump(ctx, size);
+}
+static inline void *arena_alloc_aligned(void *ctx, const size_t size) {
+    return arena_region_bump_aligned(ctx, size, 16);
 }
 
 static inline void *arena_realloc(void *ctx, void *ptr, const size_t old_size, const size_t new_size) {
     UNUSED(old_size);
     UNUSED(ptr);
-    return arena_region_bump(ctx, new_size);
+    void *result = arena_region_bump(ctx, new_size);
+    memcpy(result, ptr, old_size);
+
+    return result;
 }
 
 static inline void arena_free(void *ctx, void *ptr, const size_t size) {
@@ -148,14 +265,19 @@ static inline void arena_free(void *ctx, void *ptr, const size_t size) {
     UNUSED(size);
 }
 
-/* Multi-region arena allocator */
+
+/* 
+ * Multi-region arena allocator. Unlike the single-region version, this allocator
+ * DOES own the memory of the underlying data. The clean-up must be done by calling
+ * multiarena_free_all
+ */
 typedef struct multiarena_region_t multiarena_region_t;
 struct multiarena_region_t {
     multiarena_region_t *next;
     size_t offset;
     size_t capacity;
 
-    uintptr_t data[];
+    uint8_t data[];
 };
 
 typedef struct {
@@ -167,23 +289,122 @@ typedef struct {
     void        *inner_ctx;
 } multiarena_context_t;
 
+/*
+ * Allocates a block of @size bytes from a multi‑region arena. The arena
+ * consists of a linked list of regions; when the current region does not
+ * have enough free space a new region is obtained from the inner allocator.
+ *
+ * @ctx   - Pointer to a multiarena_context_t.
+ * @size  - Number of bytes to allocate (must be > 0).
+ *
+ * Returns:
+ *     Pointer to @size bytes within the arena, or NULL if the inner
+ *     allocator fails to provide a new region.
+ */
 static inline void *multiarena_alloc(void *ctx, const size_t size);
-static inline void *multiarena_realloc(void *ctx, void *ptr, const size_t old_size, const size_t new_size);
+
+/*
+ * Reallocates a previously allocated block to @new_size bytes. The
+ * operation can succeed in‑place only if the block resides at the end of
+ * its region and the region has enough remaining capacity. Otherwise a
+ * new block is allocated (potentially in a different region), the old
+ * contents are copied, and the old block is left untouched.
+ *
+ * @ctx       - Pointer to a multiarena_context_t.
+ * @ptr       - Pointer returned by a prior multiarena_alloc() or
+ *              multiarena_realloc().
+ * @old_size  - Original size of the allocation.
+ * @new_size  - Desired new size.
+ *
+ * Returns:
+ *     Pointer to a block of @new_size bytes (which may be the same as @ptr)
+ *     or NULL if a new block cannot be allocated. On failure the original
+ *     block remains valid.
+ */
+static inline void *multiarena_realloc(void *ctx, void *ptr,
+                                      const size_t old_size,
+                                      const size_t new_size);
+/*
+ * Frees a block allocated from the multi‑region arena. Individual frees
+ * are no‑ops because each region is a bump allocator; the function exists
+ * for API symmetry.
+ *
+ * @ctx   - Pointer to a multiarena_context_t.
+ * @ptr   - Pointer returned by multiarena_alloc() or multiarena_realloc().
+ * @size  - Size of the allocation being freed.
+ *
+ * Returns:
+ *     Nothing.
+ */
 static inline void multiarena_free(void *ctx, void *ptr, const size_t size);
 
-static inline arena_region_t *multi_as_region(multiarena_region_t *multiarena_region);
-static inline multiarena_region_t *multiarena_region_init(size_t ensure_capacity, const allocator_t *allocator, void *inner_ctx);
+/*
+ * Converts a single region of a multiarena into a stand‑alone single‑region
+ * arena_context_t. The returned arena shares the same underlying memory;
+ * it does **not** copy data. The caller must ensure the region outlives the
+ * returned arena. This main purpose of this function is to enable code reuse
+ * between single-region arena and multiarena allocation algorithms.
+ *
+ * @multiarena_region - Pointer to the region to be wrapped.
+ *
+ * Returns:
+ *     Pointer to an arena_context_t that operates on the given region.
+ */
+static inline arena_context_t *region_as_single(multiarena_region_t *multiarena_region);
+
+/*
+ * Creates a new region for a multiarena. The region is allocated using the
+ * supplied @allocator and @inner_ctx. The region's capacity is at least
+ * @ensure_capacity bytes; if the allocator returns a smaller block the
+ * function fails and returns NULL.
+ *
+ * @ensure_capacity - Minimum capacity (in bytes) the region must provide.
+ * @allocator       - Allocator used to obtain the memory for the region.
+ * @inner_ctx       - Context passed to the allocator.
+ *
+ * Returns:
+ *     Pointer to an initialized multiarena_region_t, or NULL on allocation
+ *     failure.
+ */
+static inline multiarena_region_t *multiarena_region_init(size_t ensure_capacity,
+                                                          const allocator_t *allocator,
+                                                          void *inner_ctx);
+/*
+ * Releases all memory owned by a multiarena. Every region in the linked
+ * list is returned to the inner allocator, and the context structure is
+ * cleared. After this call the multiarena_context_t must not be used
+ * unless re‑initialized.
+ *
+ * @arena - Pointer to the multiarena_context_t to be destroyed.
+ *
+ * Returns:
+ *     Nothing.
+ */
 static inline void multiarena_free_all(multiarena_context_t *arena);
 
-static inline arena_region_t *multi_as_region(multiarena_region_t *multiarena_region) {
-    arena_region_t *result = NULL;
+/*
+ * Resets a multi‑region arena to an empty state without releasing the
+ * underlying memory back to the inner allocator. All regions remain
+ * allocated, but their offsets are set to zero so that subsequent
+ * allocations will reuse the existing chunks. This operation is O(1)
+ * per region and does **not** invoke inner_alloc->free().
+ *
+ * @multiarena - Pointer to the multiarena_context_t to be reset.
+ *
+ * Returns:
+ *     Nothing.
+ */
+static inline void multiarena_reset(multiarena_context_t *multiarena);
+
+static inline arena_context_t *multi_as_region(multiarena_region_t *multiarena_region) {
+    arena_context_t *result = NULL;
 
     if (multiarena_region == NULL) {
         return result;
     }
 
     /* skip the pointer to next */
-    result = (arena_region_t *)((uintptr_t)multiarena_region + sizeof (multiarena_region_t*));
+    result = (arena_context_t *)((uintptr_t)multiarena_region + sizeof (multiarena_region_t*));
 
     return result;
 }
