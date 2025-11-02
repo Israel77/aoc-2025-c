@@ -390,11 +390,13 @@ static inline void bigint_normalize(bigint_t *num) {
     if (num->array_info.count > 0) {
         uint32_t leading = num->items[num->array_info.count - 1];
         while (num->array_info.count > 0 && leading == 0) {
-            --num->array_info.count;
+            if (--num->array_info.count == 0) {
+                break;
+            }
             leading = num->items[num->array_info.count - 1];
         }
     }
-    
+ 
     if (num->array_info.count == 0) {
         num->is_negative = false;
     }
