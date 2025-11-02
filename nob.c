@@ -29,6 +29,7 @@ void include_tests(void) {
     nob_da_append(&program_paths, "utils/tests/fixed_pool_allocator_test");
     nob_da_append(&program_paths, "utils/tests/string_utils_test");
     nob_da_append(&program_paths, "utils/tests/bigint_test");
+    nob_da_append(&program_paths, "utils/tests/hashmap_tests");
 }
 
 void include_solutions(void) {
@@ -126,7 +127,7 @@ int build_programs_async(void) {
         // Debug version
         nob_cc(&cmd);
         nob_cc_flags(&cmd);
-        nob_cmd_append(&cmd,  "-g", "-std=c11", "-DDEBUG_MODE", "-DALLOC_STD_IMPL");
+        nob_cmd_append(&cmd, "-Og", "-g", "-std=c11", "-DDEBUG_MODE", "-DALLOC_STD_IMPL");
         nob_cc_output(&cmd, output_file_dbg);
         nob_cc_inputs(&cmd, input_file);
 
