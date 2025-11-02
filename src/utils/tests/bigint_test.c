@@ -508,7 +508,7 @@ static void test_division() {
 int main(void)
 {
 
-    printf("--- Start tests: Bigint ---\n");
+    printf("\n--- Start tests: Bigint ---\n");
     test_encoding_decoding();
     test_addition();
     test_subtraction();
