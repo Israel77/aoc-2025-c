@@ -61,7 +61,7 @@ static void *da_append(void *array, array_info_t *info, const void *item) {
     return result;
 }
 
-static void da_reverse(void *array, const array_info_t *info) {
+static inline void da_reverse(void *array, const array_info_t *info) {
     uint8_t temp[info->item_size];
 
     uint8_t *start = (uint8_t*) array;
@@ -126,7 +126,7 @@ static inline bool da_equals(const void *array1, const array_info_t *info1,
     return true;
 }
 
-static void da_free(void *array, array_info_t *info) {
+static inline void da_free(void *array, array_info_t *info) {
     info->allocator->free(info->alloc_ctx, array, info->capacity * info->item_size);
 }
 

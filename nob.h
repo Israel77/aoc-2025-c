@@ -854,6 +854,7 @@ NOBDEF void nob__go_rebuild_urself(int argc, char **argv, const char *source_pat
         nob_rename(old_binary_path, binary_path);
         exit(1);
     }
+    cmd.count = 0;
 #ifdef NOB_EXPERIMENTAL_DELETE_OLD
     // TODO: this is an experimental behavior behind a compilation flag.
     // Once it is confirmed that it does not cause much problems on both POSIX and Windows
@@ -1075,7 +1076,7 @@ defer:
     if (opt_fdin)  nob_fd_close(*opt_fdin);
     if (opt_fdout) nob_fd_close(*opt_fdout);
     if (opt_fderr) nob_fd_close(*opt_fderr);
-    cmd->count = 0;
+    // cmd->count = 0;
     return result;
 }
 

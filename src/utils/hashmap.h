@@ -119,12 +119,12 @@ static void *hm_delete(hashmap_t *hm, const void *key);
 static void hm_destroy(hashmap_t *hm);
 
 #ifdef HM_IMPL
-static inline uintptr_t hm_hash(const hashmap_t *hm, const void *key) {
+static inline uint64_t hm_hash(const hashmap_t *hm, const void *key) {
     return hm->hash_func(key) % hm->usable_capacity;
 }
 
 /* This function might allocate temporary storage using the internal allocator */
-/* Time  complexity: O(1) amortized */
+/* Time  complexity: O(n) */
 /* Space complexity: O(n) */
 static inline bool hm_rehash(hashmap_t *hm) {
 
@@ -171,7 +171,7 @@ static inline bool hm_rehash(hashmap_t *hm) {
 }
 
 /* get rid of tombstones without allocating */
-/* Time  complexity: O(n) amortized */
+/* Time  complexity: O(n) */
 /* Space complexity: O(1) */
 static inline void hm_compress(hashmap_t *hm) {
     size_t last_used = 0;
@@ -240,8 +240,6 @@ exit:
 }
 
 static inline bool hm_shrink(hashmap_t *hm) {
-
-    size_t old_capacity = hm->usable_capacity;
 
     /* don't reduce the actual capacity, only the usable space */
     hm->usable_capacity /= 2;

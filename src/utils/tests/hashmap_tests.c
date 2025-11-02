@@ -8,7 +8,7 @@
 #include <string.h>
 
 #include "../test.h"
-#define ALLOC_STD_IMPL
+
 #define ALLOC_ARENA_IMPL
 #include "../allocator.h"
 #define STRING_UTILS_IMPL
