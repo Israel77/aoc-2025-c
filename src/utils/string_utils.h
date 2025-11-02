@@ -191,6 +191,11 @@ string_t string_from_cstr(const char *cstr) {
 /* O(n) amortized */
 bool string_equals(const string_t *str, const string_t *other) {
 
+    /* Deal with null pointers */
+    if (str == NULL || other == NULL) {
+        return str == other;
+    }
+
     if (str->count != other->count) {
         return false;
     }
