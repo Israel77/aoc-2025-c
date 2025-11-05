@@ -1,7 +1,4 @@
 #include "prelude.h"
-#include "prelude.h"
-#include <stdatomic.h>
-#include <stddef.h>
 #define PART_2_IMPL
 
 #define P2_THREADS 1
@@ -29,7 +26,7 @@ void *p2_solve(void *arg) {
         p2.strings = p2_split_input(ctx);
     }
 
-    pthread_barrier_wait(&ctx->common->barrier);
+    sync(ctx);
 
     const size_t tasks_per_thread = p2.num_count / ctx->common->thread_count;
     const size_t remaining = p2.num_count % ctx->common->thread_count;
@@ -47,7 +44,7 @@ void *p2_solve(void *arg) {
             + (i + 2 < p2.num_count) * p2.nums[i+2];   
     }
 
-    pthread_barrier_wait(&ctx->common->barrier);
+    sync(ctx);
 
     uint16_t local_incr = 0;
     for (size_t i = start; i < end; ++i) {
@@ -62,7 +59,7 @@ void *p2_solve(void *arg) {
         p2.result = local_incr;
     }
 
-    pthread_barrier_wait(&ctx->common->barrier);
+    sync(ctx);
 
     if (ctx-> thread_idx == 0) {
         string_builder_t sb = sb_from_u64(p2.result, &multiarena_allocator, ctx->common->arena);
