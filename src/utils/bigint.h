@@ -67,7 +67,7 @@ string_builder_t bigint_to_sb(const bigint_t *num,
 static inline bool bigint_abs_eq(const bigint_t *num, const bigint_t *other);
 static inline bool bigint_abs_lt(const bigint_t *num, const bigint_t *other);
 static inline bool bigint_abs_gt(const bigint_t *num, const bigint_t *other);
-bool bigint_eq(const bigint_t *num, const bigint_t *other);
+bool bigint_equals(const bigint_t *num, const bigint_t *other);
 bool bigint_lt(const bigint_t *num, const bigint_t *other);
 bool bigint_gt(const bigint_t *num, const bigint_t *other);
 
@@ -538,7 +538,7 @@ void bigint_mul_in(bigint_t *num, const bigint_t *other) {
 
     /* Start of the product */
     size_t prod_start_idx = num->array_info.count;
-    size_t prod_count;
+    size_t prod_count = 0;
 
 
     for (size_t i = 0; i < num_count; ++i) {

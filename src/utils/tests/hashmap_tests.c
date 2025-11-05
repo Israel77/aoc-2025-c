@@ -16,6 +16,8 @@
 
 #define HM_IMPL
 #include "../hashmap.h"
+#include "../hash_utils.h"
+
 /* -------------------------------------------------------------
  *  Test‑framework macros (provided)
  * ------------------------------------------------------------- */
@@ -24,29 +26,6 @@ static int tests_failed = 0;
 
 #define TEST_OK(msg)    do { printf("\033[32m [  OK ] %s \033[0m\n", msg); ++tests_passed; } while (0)
 #define TEST_FAIL(msg)  do { printf("\033[31m [ FAIL] %s \033[0m\n", msg); ++tests_failed; } while (0)
-/* -------------------------------------------------------------
- *  Helper hash / equality functions that work with string_t
- * ------------------------------------------------------------- */
-static uint64_t string_hash(const void *key) {
-    const string_t *s = (const string_t *)key;
-    uint64_t h = 0;
-    for (size_t i = 0; i < s->count; ++i) {
-        h = h * 31 + (unsigned char)s->chars[i];
-    }
-    return h;
-}
-
-static bool string_eq(const void *a, const void *b) {
-    return string_equals((const string_t *)a, (const string_t *)b);
-}
-
-static uint64_t int_hash(const void *key) {
-    return *(uint64_t*)key;
-}
-static bool int64_eq(const void *a, const void *b) {
-    return *(int64_t*)a == *(int64_t*)b;
-}
-
 /* -------------------------------------------------------------
  *  Test helpers
  * ------------------------------------------------------------- */
@@ -156,7 +135,7 @@ static void test_delete_multiple(void) {
                            12, &err);
 
     /* Store the keys and values in an arena to ensure they will outlive the hashmap */
-    uintptr_t *buffer = malloc(4096);
+    uint8_t *buffer = malloc(4096);
     arena_context_t *test_arena = arena_init(buffer, 4096);
 
     /* Insert a set of keys */
@@ -228,11 +207,11 @@ static void test_delete_multiple(void) {
 static void test_delete_compress(void) {
     error_t err = {0};
     hashmap_t hm = hm_init(&global_std_allocator, NULL,
-                           int_hash, int64_eq,
+                           int64_hash, int64_eq,
                            100, &err);
 
     /* Store the keys and values in an arena to ensure they will outlive the hashmap */
-    uintptr_t *buffer = malloc(4096);
+    uint8_t *buffer = malloc(4096);
     arena_context_t *test_arena = arena_init(buffer, 4096);
 
     for (int64_t i = 0; i < 100; ++i) {
@@ -297,21 +276,22 @@ static void test_resize(void) {
     size_t initial_cap = hm.capacity;
 
     /* arena allocator for the strings */
-    uintptr_t buffer[1024];
+    uint8_t buffer[1024];
     arena_context_t *arena_ctx = arena_init(buffer, 1024);
 
 
     for (int i = 0; i < 20; ++i) {
         /* use the arena so each key lives long enough */
-        char *buf     = arena_alloc(arena_ctx, 3 * sizeof (char));
+        char     *buf = arena_alloc(arena_ctx, 4 * sizeof (char));
         string_t *key = arena_alloc(arena_ctx, sizeof (string_t));
-        string_t *val = arena_alloc(arena_ctx, sizeof (string_t));
 
-        snprintf(buf, sizeof(buf), "k%d", i);
+        assert(buf && "Could not allocate memory for the buffer");
+        assert(key && "Could not allocate memory for the key");
+
+        snprintf(buf, 4 * sizeof(*buf), "k%d", i);
         *key = string_from_cstr(buf);
-        val = key;   /* value can be same string */
 
-        hm_insert(&hm, key, val, &err);
+        hm_insert(&hm, key, key, &err);
         report_assert(!err.is_error, "insert during resize – no error");
     }
 
@@ -335,6 +315,7 @@ static void test_resize(void) {
  *  Main – run all tests and report totals
  * ------------------------------------------------------------- */
 int main(void) {
+    UNUSED(multiarena_allocator);
     printf("--- Start tests: Hashmap ---\n");
     test_init();
     test_insert_one();

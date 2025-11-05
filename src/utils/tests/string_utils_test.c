@@ -275,6 +275,8 @@ static void test_sb_reversion() {
  *  Main – run all tests and report summary
  *------------------------------------------------------------------*/
 int main(void) {
+    UNUSED(arena_allocator);
+
     test_sb_from_cstr();
     test_sb_with_capacity();
     test_sb_append_char();

@@ -126,8 +126,9 @@ static inline uint64_t hm_hash(const hashmap_t *hm, const void *key) {
 /* This function might allocate temporary storage using the internal allocator */
 /* Time  complexity: O(n) */
 /* Space complexity: O(n) */
-static inline bool hm_rehash(hashmap_t *hm) {
+static inline bool hm_rehash(hashmap_t *hm, size_t old_capacity) {
 
+    /* Stores the old key-value pairs for rehashing */
     hm_node_t *needs_rehash;
     size_t rehash_count = 0;
     bool temp_allocated;
@@ -146,7 +147,7 @@ static inline bool hm_rehash(hashmap_t *hm) {
     }
 
     for (size_t i = 0; i < hm->usable_capacity; ++i) {
-        if (hm->data[i].state == HM_NODE_USED) {
+        if (i < old_capacity && hm->data[i].state == HM_NODE_USED) {
             needs_rehash[rehash_count++] = hm->data[i];
         }
         hm->data[i].state = HM_NODE_FREE;
@@ -236,15 +237,16 @@ static inline bool hm_grow(hashmap_t *hm) {
 
 exit:
     hm->usable_capacity = new_capacity;
-    return hm_rehash(hm);
+    return hm_rehash(hm, old_capacity);
 }
 
 static inline bool hm_shrink(hashmap_t *hm) {
+    size_t old_capacity = hm->usable_capacity;
 
     /* don't reduce the actual capacity, only the usable space */
     hm->usable_capacity /= 2;
 
-    return hm_rehash(hm);
+    return hm_rehash(hm, old_capacity);
 }
 
 
@@ -360,14 +362,14 @@ void *hm_delete(hashmap_t *hm, const void *key) {
 
     void *result = NULL;
 
-    /* rehash if there are too many tombstones */
-    if (hm->tombstones > 3 * (hm->usable_capacity / 4)) {
-        hm_compress(hm);
+    /* shrink if the array is too sparse */
+    if (hm->usable_capacity > 128 && unlikely(hm->count < hm->usable_capacity / 4)) {
+        hm_shrink(hm);
     }
 
-    /* don't shrink by load factor if the array is already small */
-    if (hm->usable_capacity > 128 && unlikely(hm->count < hm->usable_capacity)) {
-        hm_shrink(hm);
+    /* rehash if there are too many tombstones */
+    if (unlikely(hm->tombstones > 3 * (hm->usable_capacity / 4))) {
+        hm_compress(hm);
     }
 
     uintptr_t hash = hm_hash(hm, key);

@@ -1,73 +1,84 @@
 #include "prelude.h"
+#define PART_1_IMPL
+
+#define P1_THREADS 1
 
 typedef struct {
     array_info_t array_info;
     uint32_t *items;
 } u32_array_t;
 
-u32_array_t parse_input() {
+struct p1_data {
+    u32_array_t nums;
+    string_array_t strings;
+    atomic_uint_fast16_t result;
+};
 
-    FILE *file = fopen("inputs/day_01.txt", "r");
+static struct p1_data p1;
 
-    assert(file && "File not found");
+/* Functions for part 1 */
+static string_array_t p1_split_input(struct part_context *ctx);
 
-    error_t err = {0};
-    arena_context_t ctx = {
-        .inner_alloc = &global_std_allocator,
-        .inner_ctx = NULL
-    };
+void *p1_solve(void *arg) {
 
-    u32_array_t result = {
-        .array_info = {
-            .allocator = &global_std_allocator,
-            .alloc_ctx = NULL
-        }
-    };
+    struct part_context *ctx = arg;
 
-    string_builder_t file_sb = sb_read_file(file, &arena_allocator, &ctx);
+    bool is_multithreaded = ctx->common->thread_count > 1;
 
-    string_t file_str = sb_build(&file_sb);
-
-    string_array_t numbers_str = string_split_by_char(&file_str, '\n', &arena_allocator, &ctx);
-
-    da_reserve(&result.array_info, result.items, numbers_str.array_info.count);
-    for (size_t i = 0; i < numbers_str.array_info.count; ++i) {
-
-        string_t num_str = numbers_str.items[i];
-        if (num_str.count == 0) continue;
-        
-        uint64_t num = string_parse_u64_safe(&num_str, &err);
-        if (err.is_error) {
-            goto defer;
-        }
-
-        da_append(&result.array_info, result.items, &num);
+    if (ctx->thread_idx == 0) {
+        p1.strings = p1_split_input(ctx);
     }
 
-defer:
-    fclose(file);
-    arena_free_all(&ctx);
+    sync(ctx);
 
-    if (err.is_error) {
-        fprintf(stderr, "%s\n", err.error_msg);
-        abort();
+    const size_t tasks_per_thread = p1.strings.array_info.count / ctx->common->thread_count;
+    const size_t remaining = p1.strings.array_info.count % ctx->common->thread_count;
+
+    const size_t start = tasks_per_thread * ctx->thread_idx;
+    const size_t end   = start + tasks_per_thread + (ctx->thread_idx < remaining);
+
+    for (size_t i = start; i < end; ++i) {
+        p1.nums.items[i] = string_parse_u64_unsafe(&p1.strings.items[i], NULL);   
     }
 
-    return result;
+    uint16_t local_incr = 0;
+    for (size_t i = start; i < end; ++i) {
+        if (i!=0 && (p1.nums.items[i] > p1.nums.items[i-1])) {
+            local_incr++;
+        }
+    }
+
+    if (is_multithreaded) {
+        atomic_fetch_add(&p1.result, local_incr);
+    } else {
+        p1.result = local_incr;
+    }
+
+    sync(ctx);
+
+    if (ctx-> thread_idx == 0) {
+        string_builder_t sb = sb_from_u64(p1.result, &multiarena_allocator, ctx->common->arena);
+        ctx->common->output = sb_build(&sb);
+    }
+
+    return NULL;
 }
 
-int main(void) {
 
-    u32_array_t nums = parse_input();
+static string_array_t p1_split_input(struct part_context *ctx) {
 
-    uint32_t count_incr = 0;
-    for (size_t i = 1; i < nums.array_info.count; ++i) {
-        count_incr += (nums.items[i] > nums.items[i-1]);
-    }
+    array_info_t p1_arr_info = {
+        .item_size = sizeof (*p1.nums.items),
+        .allocator = &multiarena_allocator,
+        .alloc_ctx = ctx->common->arena,
+    };
 
-    printf("%d\n", count_incr);
+    p1.nums.array_info = p1_arr_info;
 
-    nums.array_info.allocator->free(nums.items, nums.array_info.alloc_ctx, nums.array_info.capacity * sizeof(uint32_t));
+    string_array_t str = string_split_by_char(ctx->common->input, '\n', &multiarena_allocator, ctx->common->arena);
+    p1.nums.items = da_reserve(p1.nums.items, &p1.nums.array_info, str.array_info.count);
 
-    return 0;
+    assert(p1.nums.items && "Could not allocate memory");
+
+    return str;
 }

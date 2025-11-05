@@ -85,7 +85,7 @@ static void test_addition() {
 
     expected_result = bigint_from_cstr("256", &global_std_allocator, NULL, &err);
     bigint_add_in(&result, &small_positive);
-    if (bigint_eq(&expected_result, &result)) {
+    if (bigint_equals(&expected_result, &result)) {
         TEST_OK("Add positive integers");
     } else {
         TEST_FAIL("Add positive integers");
@@ -98,7 +98,7 @@ static void test_addition() {
     /* Test adding a small negative integer */
     expected_result = bigint_from_cstr("1", &global_std_allocator, NULL, &err); /* 256 + (-255) = 1 */
     bigint_add_in(&result, &small_negative);
-    if (bigint_eq(&expected_result, &result)) {
+    if (bigint_equals(&expected_result, &result)) {
         TEST_OK("Add positive and negative integers");
     } else {
         TEST_FAIL("Add positive and negative integers");
@@ -113,7 +113,7 @@ static void test_addition() {
     /* Test adding a big positive integer */
     expected_result = bigint_from_cstr("100000000000", &global_std_allocator, NULL, &err); /* 0 + 100000000000 = 100000000000 */
     bigint_add_in(&result, &big_positive);
-    if (bigint_eq(&expected_result, &result)) {
+    if (bigint_equals(&expected_result, &result)) {
         TEST_OK("Add big positive integer");
     } else {
         TEST_FAIL("Add big positive integer");
@@ -128,7 +128,7 @@ static void test_addition() {
     /* Test adding a big negative integer */
     expected_result = bigint_from_cstr("-10000000000", &global_std_allocator, NULL, &err); /* 0 + (-10000000000) = -10000000000 */
     bigint_add_in(&result, &big_negative);
-    if (bigint_eq(&expected_result, &result)) {
+    if (bigint_equals(&expected_result, &result)) {
         TEST_OK("Add big negative integer");
     } else {
         TEST_FAIL("Add big negative integer");
@@ -177,7 +177,7 @@ static void test_subtraction() {
         bigint_copy(&result, &num1);
         bigint_sub_in(&result, &num2);
 
-        if (bigint_eq(&expected_result, &result)) {
+        if (bigint_equals(&expected_result, &result)) {
             TEST_OK("Random subtraction");
         } else {
             TEST_FAIL("Random subtraction");
@@ -220,7 +220,7 @@ static void test_multiplication() {
 
     bigint_mul_in(&num1, &num2);
 
-    if (bigint_eq(&expected_result, &num1)) {
+    if (bigint_equals(&expected_result, &num1)) {
         TEST_OK("Multiply positive numbers");
     } else {
         TEST_FAIL("Multiply positive numbers");
@@ -234,7 +234,7 @@ static void test_multiplication() {
 
     bigint_mul_in(&num1, &num2);
 
-    if (bigint_eq(&expected_result, &num1)) {
+    if (bigint_equals(&expected_result, &num1)) {
         TEST_OK("Multiply positive numbers with (binary) carry");
     } else {
         TEST_FAIL("Multiply positive numbers with (binary) carry");
@@ -248,7 +248,7 @@ static void test_multiplication() {
 
     bigint_mul_in(&num1, &num2);
 
-    if (bigint_eq(&expected_result, &num1)) {
+    if (bigint_equals(&expected_result, &num1)) {
         TEST_OK("Multiply negative numbers");
     } else {
         TEST_FAIL("Multiply negative numbers");
@@ -262,7 +262,7 @@ static void test_multiplication() {
 
     bigint_mul_in(&num1, &num2);
 
-    if (bigint_eq(&expected_result, &num1)) {
+    if (bigint_equals(&expected_result, &num1)) {
         TEST_OK("Multiply positive and negative numbers");
     } else {
         TEST_FAIL("Multiply positive and negative numbers");
@@ -336,7 +336,7 @@ static void test_division() {
 
         actual = bigint_divmod(&num1, &num2, allocator, &test_ctx, &err);
 
-        if (bigint_eq(&expected.quotient, &actual.quotient) && bigint_eq(&expected.remainder, &actual.remainder)) {
+        if (bigint_equals(&expected.quotient, &actual.quotient) && bigint_equals(&expected.remainder, &actual.remainder)) {
             TEST_OK("Divide positive numbers");
         } else {
             TEST_FAIL("Divide positive numbers");
@@ -380,7 +380,7 @@ static void test_division() {
 
         actual = bigint_divmod(&num1, &num2, allocator, &test_ctx, &err);
 
-        if (bigint_eq(&expected.quotient, &actual.quotient) && bigint_eq(&expected.remainder, &actual.remainder)) {
+        if (bigint_equals(&expected.quotient, &actual.quotient) && bigint_equals(&expected.remainder, &actual.remainder)) {
             TEST_OK("Divide negative numbers");
         } else {
             TEST_FAIL("Divide negative numbers");
@@ -424,7 +424,7 @@ static void test_division() {
 
         actual = bigint_divmod(&num1, &num2, allocator, &test_ctx, &err);
 
-        if (bigint_eq(&expected.quotient, &actual.quotient) && bigint_eq(&expected.remainder, &actual.remainder)) {
+        if (bigint_equals(&expected.quotient, &actual.quotient) && bigint_equals(&expected.remainder, &actual.remainder)) {
             TEST_OK("Divide negative by positive");
         } else {
             TEST_FAIL("Divide negative by positive");
@@ -467,7 +467,7 @@ static void test_division() {
 
         actual = bigint_divmod(&num1, &num2, allocator, &test_ctx, &err);
 
-        if (bigint_eq(&expected.quotient, &actual.quotient) && bigint_eq(&expected.remainder, &actual.remainder)) {
+        if (bigint_equals(&expected.quotient, &actual.quotient) && bigint_equals(&expected.remainder, &actual.remainder)) {
             TEST_OK("Divide positive by negative");
         } else {
             TEST_FAIL("Divide positive by negative");
@@ -507,6 +507,7 @@ static void test_division() {
 
 int main(void)
 {
+    UNUSED(arena_allocator);
 
     printf("\n--- Start tests: Bigint ---\n");
     test_encoding_decoding();

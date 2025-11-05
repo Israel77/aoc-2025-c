@@ -20,7 +20,7 @@ static int tests_failed = 0;
 static arena_context_t *make_arena(size_t capacity)
 {
     /* Allocate raw storage large enough for the arena struct + data */
-    uintptr_t *buf = (uintptr_t *)malloc(sizeof(arena_context_t) + capacity);
+    uint8_t *buf = malloc(sizeof(arena_context_t) + capacity);
     if (!buf) return NULL;
 
     return arena_init(buf, capacity);
@@ -155,7 +155,7 @@ static void test_arena_reset_reuse(void)
 {
     const size_t cap = 8192;
     // arena_context_t *a = make_arena(cap);
-    uintptr_t *buffer = malloc(cap * sizeof (uintptr_t));
+    uint8_t *buffer = malloc(cap * sizeof (uint8_t));
     arena_context_t *a = arena_init(buffer, cap);
     if (!a) { TEST_FAIL("arena init"); return; }
 

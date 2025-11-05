@@ -88,7 +88,7 @@ typedef struct {
  * buffer.
  *
  * @buf       - Pointer to the start of the memory region that will back the arena.
- * @capacity  - Size of the region in bytes. Must be a multiple of sizeof(uintptr_t).
+ * @capacity  - Size of the region in bytes. sizeof(uint8_t).
  *
  * Returns:
  *     Pointer to a newly‑initialized arena_context_t that references @buf.
@@ -96,7 +96,7 @@ typedef struct {
  *     inserted at the start of the buffer. The arena does not own the memory;
  *     the caller must ensure the buffer remains valid for the arena's lifetime.
  */
-static inline arena_context_t *arena_init(uintptr_t *buf, size_t capacity);
+static inline arena_context_t *arena_init(uint8_t *buf, size_t capacity);
 
 /*
  * Allocates a block of @size bytes from the arena. The allocation is
@@ -190,8 +190,13 @@ static inline void *arena_region_bump(arena_context_t *ctx, size_t size);
  */
 static inline void arena_reset(arena_context_t *ctx);
 
+static allocator_t arena_allocator = {
+    .alloc = &arena_alloc,
+    .realloc = &arena_realloc,
+    .free = &arena_free
+};
 
-static inline arena_context_t *arena_init(uintptr_t *buf, size_t capacity) {
+static inline arena_context_t *arena_init(unsigned char *buf, size_t capacity) {
 
     /* Remaining capacity in the buffer after storing metadata about the arena */
     size_t remaining_cap = capacity - 2 * sizeof (size_t);
@@ -229,7 +234,7 @@ static inline void *arena_region_bump_aligned(arena_context_t *region, size_t si
 static inline void *arena_region_bump(arena_context_t *region, size_t size) {
     void *result;
 
-    if (region->capacity - region->offset < size) {
+    if (region == NULL || (region->capacity - region->offset < size)) {
         return NULL;
     }
 
@@ -264,7 +269,6 @@ static inline void arena_free(void *ctx, void *ptr, const size_t size) {
     UNUSED(ptr);
     UNUSED(size);
 }
-
 
 /* 
  * Multi-region arena allocator. Unlike the single-region version, this allocator
@@ -396,7 +400,13 @@ static inline void multiarena_free_all(multiarena_context_t *arena);
  */
 static inline void multiarena_reset(multiarena_context_t *multiarena);
 
-static inline arena_context_t *multi_as_region(multiarena_region_t *multiarena_region) {
+static allocator_t multiarena_allocator = {
+    .alloc = &multiarena_alloc,
+    .realloc = &multiarena_realloc,
+    .free = &multiarena_free
+};
+
+static inline arena_context_t *region_as_single(multiarena_region_t *multiarena_region) {
     arena_context_t *result = NULL;
 
     if (multiarena_region == NULL) {
@@ -457,7 +467,7 @@ static void *multiarena_alloc(void *ctx, const size_t size) {
      */
 
     /* Try to allocate within an existing chunk */
-    void *result = arena_region_bump(multi_as_region(arena->end), size);
+    void *result = arena_allocator.alloc(region_as_single(arena->end), size);
     if (result != NULL) {
         /* Succesful allocation */
         return result;
@@ -472,7 +482,7 @@ static void *multiarena_alloc(void *ctx, const size_t size) {
     arena->end->next = multiarena_region_init(size, arena->inner_alloc, arena->inner_ctx);
     arena->end = arena->end->next;
 
-    result = arena_region_bump(multi_as_region(arena->end), size);
+    result = arena_allocator.alloc(region_as_single(arena->end), size);
     if (result != NULL) {
         arena->end->next = NULL;
     }
@@ -551,12 +561,6 @@ static inline void multiarena_reset(multiarena_context_t *multiarena) {
     multiarena->end = multiarena->begin;
 }
 
-
-static allocator_t multiarena_allocator = {
-    .alloc = &multiarena_alloc,
-    .realloc = &multiarena_realloc,
-    .free = &multiarena_free
-};
 
 #endif /* #ifdef ALLOC_ARENA_IMPL */
 

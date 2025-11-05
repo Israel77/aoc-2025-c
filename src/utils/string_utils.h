@@ -81,6 +81,11 @@ uint64_t string_parse_u64_safe(const string_t *str, error_t *err);
 /* Parse string into an unsigned 64-bit integer. Never returns an error, the parameter is just for compatibility with safe versions. */
 uint64_t string_parse_u64_unsafe(const string_t *str, error_t *err);
 
+/*//////////////////////////////////////////////////////// */
+/* Convert integer types to strings */
+string_builder_t sb_from_u64(const uint64_t value, const allocator_t *allocator, void *alloc_ctx);
+
+
 
 #ifdef STRING_UTILS_IMPL
 
@@ -116,6 +121,7 @@ string_builder_t sb_with_capacity(const size_t capacity, const allocator_t *allo
         .array_info = {
             .item_size = sizeof (char),
             .count = 0,
+            .min_capacity = capacity,
             .allocator = allocator,
             .alloc_ctx = alloc_ctx
         }
@@ -362,7 +368,7 @@ int64_t string_parse_i64_unsafe(const string_t *str, error_t *err) {
 
     /* This function never actually errors but the parameters is maintained */
     /* for ease of refactoring after using the safe version */
-    err->is_error = false;
+    if (err != NULL) err->is_error = false;
 
     int64_t result = 0;
     /* 0 is +, 1 is - */
@@ -451,7 +457,7 @@ uint64_t string_parse_u64_unsafe(const string_t *str, error_t *err) {
 
     /* This function never actually errors but the parameters is maintained */
     /* for ease of refactoring after using the safe version */
-    err->is_error = false;
+    if (err != NULL) err->is_error = false;
 
     uint64_t result = 0;
 
@@ -564,6 +570,23 @@ void string_sprint(char *buffer, const string_t *str) {
 }
 void string_sprintln(char *buffer, const string_t *str) {
     sprintf(buffer, "%.*s\n", (int)str->count, str->chars);
+}
+
+string_builder_t sb_from_u64(const uint64_t value, const allocator_t *allocator, void *alloc_ctx) {
+
+    string_builder_t result = sb_with_capacity(20, allocator, alloc_ctx);
+
+    uint64_t current = value;
+
+    while (current > 0) {
+        unsigned char digit = '0' + (current % 10);
+        result.items[result.array_info.count++] = digit;
+        current /= 10;
+    }
+
+    da_reverse(result.items, &result.array_info);
+
+    return result;
 }
 
 
