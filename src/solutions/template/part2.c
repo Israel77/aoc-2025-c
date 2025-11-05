@@ -22,5 +22,7 @@ void *p2_solve(void *arg) {
     size_t thread_count = ctx->common->thread_count;
     size_t thread_idx   = ctx->thread_idx;
 
+    printf("Not implemented yet!");
+
     return NULL;
 }

@@ -131,17 +131,3 @@ static string_t read_file() {
     fclose(file);
     return file_str;
 }
-
-#ifndef PART_1_IMPL
-string_t p1_solve(string_t *input) {
-    UNUSED(input);
-    return string_from_cstr("Not implemented yet!");
-}
-#endif /* ifndef PART_1_IMPL */
-
-#ifndef PART_2_IMPL
-void *p2_solve(void *ctx) {
-    // return string_from_cstr("Not implemented yet!");
-    return ctx;
-}
-#endif /* ifndef PART_1_IMPL */
