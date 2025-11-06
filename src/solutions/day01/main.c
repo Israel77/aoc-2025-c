@@ -31,6 +31,8 @@ int main(void) {
 
     setup();
 
+    printf("==== Day 1 ====\n");
+
     printf("Solution to part 1:\n");
     clock_start = now_ns();
 
