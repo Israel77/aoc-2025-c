@@ -578,6 +578,12 @@ string_builder_t sb_from_u64(const uint64_t value, const allocator_t *allocator,
 
     uint64_t current = value;
 
+    if (value == 0) {
+        result.items[0] = '0';
+        result.array_info.count = 1;
+        return result;
+    }
+
     while (current > 0) {
         unsigned char digit = '0' + (current % 10);
         result.items[result.array_info.count++] = digit;
