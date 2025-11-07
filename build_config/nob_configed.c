@@ -2,8 +2,6 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
-#include <threads.h>
 
 #define NOB_IMPLEMENTATION
 #define NOB_WARN_DEPRECATED
