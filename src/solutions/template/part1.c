@@ -1,5 +1,5 @@
 #include "prelude.h"
-// #define PART_1_IMPL
+#define PART_1_IMPL
 
 #define P1_THREADS 1
 

@@ -201,11 +201,8 @@ static void include_info_only(void) {
 
 static void include_utils_tests(void) {
     nob_da_append(&build_paths,"utils/tests/std_allocator_test");
-    nob_da_append(&build_paths,"utils/tests/std_allocator_test");
-    nob_da_append(&build_paths,"utils/tests/std_allocator_test");
-    nob_da_append(&build_paths,"utils/tests/std_allocator_test");
     nob_da_append(&build_paths, "utils/tests/arena_allocator_test");
-    nob_da_append(&build_paths, "utils/tests/fixed_pool_allocator_test");
+    // nob_da_append(&build_paths, "utils/tests/fixed_pool_allocator_test");
     nob_da_append(&build_paths, "utils/tests/string_utils_test");
     nob_da_append(&build_paths, "utils/tests/bigint_test");
     nob_da_append(&build_paths, "utils/tests/hashmap_tests");

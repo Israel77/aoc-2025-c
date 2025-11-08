@@ -2,7 +2,7 @@
 #define ALLOC_STD_IMPL
 #endif
 #include "../allocator.h"
-#include "../test.h"
+#include "../macros.h"
 #include <stdio.h>
 #include <string.h>
 

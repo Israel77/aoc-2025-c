@@ -6,7 +6,7 @@
 #define MAX_THREADS 32
 static unsigned char file_buffer[FILE_CAP];
 static arena_context_t *file_arena;
-static multiarena_context_t solution_arena;
+static arena_context_t solution_arena;
 
 static string_t read_file();
 static inline void setup();
@@ -29,9 +29,15 @@ int main(void) {
     volatile uint64_t clock_start;
     volatile uint64_t clock_end;
 
+    volatile uint64_t clock_start_total;
+    volatile uint64_t clock_end_total;
+
     setup();
 
+    clock_start_total = now_ns();
     printf("==== Day 1 ====\n");
+
+#ifdef PART_1_IMPL
 
     printf("Solution to part 1:\n");
     clock_start = now_ns();
@@ -54,8 +60,10 @@ int main(void) {
     string_println(&p1_contexts[0].common->output);
     printf("Took: %'ld ns\n", clock_end - clock_start);
 
-    multiarena_reset(&solution_arena);
+    arena_reset(&solution_arena);
+#endif /* ifdef PART_1_IMPL */
 
+#ifdef PART_2_IMPL
     printf("Solution to part 2:\n");
     clock_start = now_ns();
 
@@ -77,7 +85,12 @@ int main(void) {
     string_println(&p2_contexts[0].common->output);
     printf("Took: %'ld ns\n", clock_end - clock_start);
 
-    multiarena_free_all(&solution_arena);
+    clock_end_total = now_ns();
+#endif /* ifdef PART_2_IMPL */
+
+    printf("\nTotal time (includes IO overhead): %'ld ns\n", clock_end_total - clock_start_total);
+
+    arena_destroy(&solution_arena);
 
     return 0;
 }
@@ -87,12 +100,8 @@ static inline void setup() {
     setlocale(LC_NUMERIC, "pt_BR.UTF-8");
 
     /* Setup arenas */
-    file_arena = arena_init(file_buffer, FILE_CAP);
-
-    solution_arena.begin = NULL;
-    solution_arena.end = NULL;
-    solution_arena.inner_alloc = &global_std_allocator;
-    solution_arena.inner_ctx = NULL;
+    file_arena = arena_from_buf(file_buffer, FILE_CAP);
+    solution_arena = arena_init(4096, ARENA_FAST_ALLOC | ARENA_GROWABLE | ARENA_MALLOC_BACKEND, NULL, NULL);
 
     /* Load the file into memory */
     input = read_file();
@@ -133,17 +142,3 @@ static string_t read_file() {
     fclose(file);
     return file_str;
 }
-
-#ifndef PART_1_IMPL
-string_t p1_solve(string_t *input) {
-    UNUSED(input);
-    return string_from_cstr("Not implemented yet!");
-}
-#endif /* ifndef PART_1_IMPL */
-
-#ifndef PART_2_IMPL
-void *p2_solve(void *ctx) {
-    // return string_from_cstr("Not implemented yet!");
-    return ctx;
-}
-#endif /* ifndef PART_1_IMPL */

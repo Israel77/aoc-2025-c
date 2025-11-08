@@ -6,7 +6,7 @@
 #define MAX_THREADS 32
 static unsigned char file_buffer[FILE_CAP];
 static arena_context_t *file_arena;
-static multiarena_context_t solution_arena;
+static arena_context_t solution_arena;
 
 static string_t read_file();
 static inline void setup();
@@ -31,6 +31,7 @@ int main(void) {
 
     setup();
 
+#ifdef PART_1_IMPL
     printf("Solution to part 1:\n");
     clock_start = now_ns();
 
@@ -52,8 +53,10 @@ int main(void) {
     string_println(&p1_contexts[0].common->output);
     printf("Took: %'ld ns\n", clock_end - clock_start);
 
-    multiarena_reset(&solution_arena);
+    arena_reset(&solution_arena);
+#endif /* ifdef PART1_IMPL */
 
+#ifdef PART_2_IMPL
     printf("Solution to part 2:\n");
     clock_start = now_ns();
 
@@ -74,8 +77,9 @@ int main(void) {
     clock_end = now_ns();
     string_println(&p2_contexts[0].common->output);
     printf("Took: %'ld ns\n", clock_end - clock_start);
+#endif
 
-    multiarena_free_all(&solution_arena);
+    arena_destroy(&solution_arena);
 
     return 0;
 }
@@ -85,12 +89,8 @@ static inline void setup() {
     setlocale(LC_NUMERIC, "pt_BR.UTF-8");
 
     /* Setup arenas */
-    file_arena = arena_init(file_buffer, FILE_CAP);
-
-    solution_arena.begin = NULL;
-    solution_arena.end = NULL;
-    solution_arena.inner_alloc = &global_std_allocator;
-    solution_arena.inner_ctx = NULL;
+    file_arena = arena_from_buf(file_buffer, FILE_CAP);
+    solution_arena = arena_init(4096, ARENA_FAST_ALLOC | ARENA_GROWABLE | ARENA_MALLOC_BACKEND, NULL, NULL);
 
     /* Load the file into memory */
     input = read_file();

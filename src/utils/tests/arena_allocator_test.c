@@ -9,37 +9,20 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "../test.h"
+#include "../macros.h"
 
 static int tests_passed = 0;
 static int tests_failed = 0;
 
-/* -------------------------------------------------------------------------
- * Helper – create a single‑region arena backed by a malloc’ed buffer
- * ------------------------------------------------------------------------- */
-static arena_context_t *make_arena(size_t capacity)
-{
-    /* Allocate raw storage large enough for the arena struct + data */
-    uint8_t *buf = malloc(sizeof(arena_context_t) + capacity);
-    if (!buf) return NULL;
-
-    return arena_init(buf, capacity);
-}
-
-static multiarena_context_t make_multiarena(void) {
-    multiarena_context_t arena = {0};
-    arena.inner_alloc = &global_std_allocator;   /* std allocator as backing */
-    arena.inner_ctx   = NULL;
-    return arena;
-}
+/* Test buffer for single region arenas */
+static uint8_t test_buffer[8192];
 
 /* -------------------------------------------------------------------------
- * Test 1 – primitive allocation
+ * Test primitive allocation
  * ------------------------------------------------------------------------- */
 static void test_arena_primitive(void)
 {
-    const size_t cap = 1024;
-    arena_context_t *a = make_arena(cap);
+    arena_context_t *a = arena_from_buf(test_buffer, 8192);
     if (!a) { TEST_FAIL("arena init"); return; }
 
     int *p = (int *)arena_alloc(a, sizeof(int));
@@ -53,17 +36,13 @@ static void test_arena_primitive(void)
     arena_free(a, p, sizeof(int));   /* no‑op */
     arena_reset(a);
     arena_free(a, NULL, 0);           /* still safe */
-
-    free(a);   /* buffer was allocated with malloc */
 }
 
 /* -------------------------------------------------------------------------
- * Test 2 – array allocation and realloc
+ * Test array allocation and realloc
  * ------------------------------------------------------------------------- */
 static void test_arena_array(void) {
-    /* Initialise arena (4 KB buffer) */
-    const size_t arena_capacity = 4096;
-    arena_context_t *arena = make_arena(arena_capacity);
+    arena_context_t *arena = arena_from_buf(test_buffer, 8192);
     if (!arena) { TEST_FAIL("arena init"); return; }
 
     /* Allocate 32‑element double array */
@@ -111,7 +90,6 @@ static void test_arena_array(void) {
     /* Clean up */
     arena_free(arena, a2, n_grown * sizeof(double));
     arena_reset(arena);
-    free(arena);
 }
 
 
@@ -126,8 +104,7 @@ typedef struct {
 
 static void test_arena_struct(void)
 {
-    const size_t cap = 512;
-    arena_context_t *a = make_arena(cap);
+    arena_context_t *a= arena_from_buf(test_buffer, 8192);
     if (!a) { TEST_FAIL("arena init"); return; }
 
     test_struct_t *s = (test_struct_t *)arena_alloc(a, sizeof(test_struct_t));
@@ -145,7 +122,6 @@ static void test_arena_struct(void)
         TEST_OK ("arena struct fields");
 
     arena_reset(a);
-    free(a);
 }
 
 /* -------------------------------------------------------------------------
@@ -154,9 +130,8 @@ static void test_arena_struct(void)
 static void test_arena_reset_reuse(void)
 {
     const size_t cap = 8192;
-    // arena_context_t *a = make_arena(cap);
     uint8_t *buffer = malloc(cap * sizeof (uint8_t));
-    arena_context_t *a = arena_init(buffer, cap);
+    arena_context_t *a = arena_from_buf(buffer, cap);
     if (!a) { TEST_FAIL("arena init"); return; }
 
     /* Allocate many small blocks to fill the buffer */
@@ -198,13 +173,12 @@ static void test_arena_reset_reuse(void)
         TEST_OK ("arena large after reset");
     }
 
-    free(a);
 }
 
 static void test_primitive(void) {
-    multiarena_context_t arena = make_multiarena();
+    arena_context_t arena = arena_init(4096, ARENA_MALLOC_BACKEND | ARENA_GROWABLE | ARENA_FAST_ALLOC, NULL, NULL);
 
-    int *p = (int *)multiarena_allocator.alloc(&arena, sizeof(int));
+    int *p = (int *)arena_allocator.alloc(&arena, sizeof(int));
     if (!p) {
         TEST_FAIL("arena alloc int");
     } else {
@@ -217,16 +191,16 @@ static void test_primitive(void) {
         TEST_OK("arena alloc int");
     }
 
-    multiarena_allocator.free(&arena, p, sizeof(int));   /* no‑op but allowed */
+    arena_allocator.free(&arena, p, sizeof(int));   /* no‑op but allowed */
 
-    multiarena_free_all(&arena);   /* clean up all chunks */
+    arena_destroy(&arena);   /* clean up all chunks */
 }
 
 static void test_array(void) {
-    multiarena_context_t arena = make_multiarena();
+    arena_context_t arena = arena_init(4096, ARENA_MALLOC_BACKEND | ARENA_GROWABLE | ARENA_FAST_ALLOC, NULL, NULL);
 
     const size_t N = 32;
-    double *arr = (double *)multiarena_allocator.alloc(&arena, N * sizeof(double));
+    double *arr = (double *)arena_allocator.alloc(&arena, N * sizeof(double));
     if (!arr) {
         TEST_FAIL("arena alloc array");
     } else {
@@ -244,7 +218,7 @@ static void test_array(void) {
 
     /* Grow the array using arena_realloc (allocates a new block) */
     const size_t M = 64;
-    double *arr2 = (double *)multiarena_allocator.realloc(&arena, arr,
+    double *arr2 = (double *)arena_allocator.realloc(&arena, arr,
                                                    N * sizeof(double),
                                                    M * sizeof(double));
 
@@ -273,15 +247,15 @@ static void test_array(void) {
         TEST_FAIL("arena new region write");
     }
 
-    multiarena_allocator.free(&arena, arr2, M * sizeof(double));   /* no‑op */
+    arena_allocator.free(&arena, arr2, M * sizeof(double));   /* no‑op */
 
-    multiarena_free_all(&arena);
+    arena_destroy(&arena);
 }
 
 static void test_struct(void) {
-    multiarena_context_t arena = make_multiarena();
+    arena_context_t arena = arena_init(4096, ARENA_MALLOC_BACKEND | ARENA_GROWABLE | ARENA_FAST_ALLOC, NULL, NULL);
 
-    test_struct_t *s = (test_struct_t *)multiarena_allocator.alloc(&arena,
+    test_struct_t *s = (test_struct_t *)arena_allocator.alloc(&arena,
                                                              sizeof(test_struct_t));
     if (!s) {
         TEST_FAIL("arena alloc struct");
@@ -295,11 +269,11 @@ static void test_struct(void) {
     if (s->id != 7 || s->f != 2.71f || memcmp(s->name, "arena_test", 0x0B) != 0)
         TEST_FAIL("arena struct fields");
 
-    multiarena_free_all(&arena);
+    arena_destroy(&arena);
 }
 
 static void test_chunks_reset(void) {
-    multiarena_context_t arena = make_multiarena();
+    arena_context_t arena = arena_init(4096, ARENA_MALLOC_BACKEND | ARENA_GROWABLE | ARENA_FAST_ALLOC, NULL, NULL);
 
     /* Force creation of several chunks by allocating many small blocks */
     const size_t block_sz = 256;
@@ -307,7 +281,7 @@ static void test_chunks_reset(void) {
     void *ptrs[blocks_needed];
 
     for (size_t i = 0; i < blocks_needed; ++i) {
-        ptrs[i] = multiarena_allocator.alloc(&arena, block_sz);
+        ptrs[i] = arena_allocator.alloc(&arena, block_sz);
         if (!ptrs[i]) TEST_FAIL("arena alloc multiple chunks");
         memset(ptrs[i], (int)i, block_sz);
     }
@@ -320,10 +294,10 @@ static void test_chunks_reset(void) {
     }
 
     /* Reset the arena – all previously allocated memory becomes reusable */
-    multiarena_reset(&arena);
+    arena_reset(&arena);
 
     /* After reset allocate new objects and ensure they work */
-    int *x = (int *)multiarena_allocator.alloc(&arena, sizeof(int));
+    int *x = (int *)arena_allocator.alloc(&arena, sizeof(int));
     if (!x) {
         TEST_FAIL("arena alloc after reset");
     }
@@ -332,11 +306,11 @@ static void test_chunks_reset(void) {
 
     /* Allocate a larger block to ensure a new chunk can be created again */
     size_t large_sz = 8192;   /* larger than any existing chunk */
-    void *large = multiarena_allocator.alloc(&arena, large_sz);
+    void *large = arena_allocator.alloc(&arena, large_sz);
     if (!large) TEST_FAIL("arena alloc large after reset");
     memset(large, 0xAA, large_sz);
 
-    multiarena_free_all(&arena);
+    arena_destroy(&arena);
 }
 
 /* -------------------------------------------------------------------------
@@ -356,6 +330,8 @@ int main(void)
     printf("\n");
 
     printf("--- Start tests: Multi‑region arena ---\n");
+    tests_failed = 0;
+    tests_passed = 0;
     test_primitive();
     test_array();
     test_struct();

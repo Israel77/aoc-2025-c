@@ -50,7 +50,7 @@
 struct part_context_common {
     string_t *input;
     size_t thread_count;
-    multiarena_context_t *arena;
+    arena_context_t *arena;
     string_t output;
     pthread_barrier_t barrier;
 };

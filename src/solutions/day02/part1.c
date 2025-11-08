@@ -2,6 +2,7 @@
 #include <immintrin.h>
 #include <pthread.h>
 #include <stddef.h>
+#define PART_1_IMPL
 
 #define P1_THREADS 1
 
@@ -27,7 +28,7 @@ void *p1_solve(void *arg) {
     struct part_context *ctx = arg;
 
     /* IO and synchronization */
-    multiarena_context_t *arena = ctx->common->arena;
+    arena_context_t *arena = ctx->common->arena;
     string_t *input = ctx->common->input;
     size_t thread_count = ctx->common->thread_count;
     size_t thread_idx   = ctx->thread_idx;
@@ -37,7 +38,7 @@ void *p1_solve(void *arg) {
 
     /* Parse lines */
     if (thread_idx == 0) {
-        p1.strings = string_split_by_char(input, '\n', &multiarena_allocator, arena);
+        p1.strings = string_split_by_char(input, '\n', &arena_allocator, arena);
     }
 
     pthread_barrier_wait(&ctx->common->barrier);
@@ -57,7 +58,7 @@ void *p1_solve(void *arg) {
 
     if (thread_idx == 0) {
         uint64_t result = p1.total_xs * p1.total_ys;
-        string_builder_t sb = sb_from_u64(result, &multiarena_allocator, arena);
+        string_builder_t sb = sb_from_u64(result, &arena_allocator, arena);
         ctx->common->output = sb_build(&sb);
     }
 

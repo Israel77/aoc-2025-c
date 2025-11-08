@@ -1,6 +1,6 @@
 #include "prelude.h"
 #include <pthread.h>
-// #define PART_1_IMPL
+#define PART_1_IMPL
 
 #define P1_THREADS 1
 
@@ -48,7 +48,7 @@ void *p1_solve(void *arg) {
         uint16_t epsilon = ~gamma & ((1 << BITS) - 1);
         uint64_t value = epsilon * gamma;
 
-        string_builder_t sb = sb_from_u64(value, &multiarena_allocator, ctx->common->arena);
+        string_builder_t sb = sb_from_u64(value, &arena_allocator, ctx->common->arena);
         ctx->common->output = sb_build(&sb);
     }
 

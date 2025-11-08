@@ -295,7 +295,7 @@ static inline bool bigint_abs_eq(const bigint_t *num, const bigint_t *other) {
     return true;
 }
 
-bool bigint_eq(const bigint_t *num, const bigint_t *other) {
+bool bigint_equals(const bigint_t *num, const bigint_t *other) {
 
     if (num->is_negative != other->is_negative) {
         return false;
@@ -432,7 +432,7 @@ static inline void __bigint_add_helper(bigint_t *num, const bigint_t *other) {
 /* Performs the subtraction algorithm on the digits and flips the sign of the first if needed. */
 static inline void __bigint_sub_helper(bigint_t *num, const bigint_t *other) {
 
-    if (bigint_eq(num, other)) {
+    if (bigint_equals(num, other)) {
         num->array_info.count = 0;
         num->is_negative = false;
         return;

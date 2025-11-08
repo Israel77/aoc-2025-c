@@ -1,13 +1,15 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+
+#include "../macros.h"
 
 #undef ALLOC_STD_IMPL
 #undef ALLOC_ARENA_IMPL
 #define ALLOC_STD_IMPL
 #define ALLOC_ARENA_IMPL
 #include "../allocator.h"
-#include "../test.h"
 
 #undef STRING_UTILS_IMPL
 #define STRING_UTILS_IMPL
@@ -146,8 +148,8 @@ static void test_addition() {
 static void test_subtraction() {
 
     error_t err;
-    const allocator_t *allocator = &multiarena_allocator;
-    multiarena_context_t test_ctx = {.inner_alloc = &global_std_allocator, .inner_ctx = NULL};
+    const allocator_t *allocator = &arena_allocator;
+    arena_context_t test_ctx = arena_init(4096, ARENA_FAST_ALLOC | ARENA_VIRTUAL_BACKEND | ARENA_GROWABLE, NULL, NULL);
 
     bigint_t num1, num2, result, expected_result;
 
@@ -201,22 +203,22 @@ static void test_subtraction() {
                     (int)result_str.count, result_str.chars);
         }
 
-        multiarena_reset(&test_ctx);
+        arena_reset(&test_ctx);
     }
 
     /* Clean up */
-    multiarena_free_all(&test_ctx);
+    allocator->free_all(&test_ctx);
 }
 
 
 static void test_multiplication() {
 
     error_t err = {0};
-    multiarena_context_t test_ctx = { .inner_alloc = &global_std_allocator };
+    arena_context_t test_ctx = arena_init(4096, ARENA_FAST_ALLOC | ARENA_VIRTUAL_BACKEND | ARENA_GROWABLE, NULL, NULL);
 
-    bigint_t num1 = bigint_from_cstr("4294967296", &multiarena_allocator, &test_ctx, &err);
-    bigint_t num2 = bigint_from_cstr("2", &multiarena_allocator, &test_ctx, &err);
-    bigint_t expected_result = bigint_from_cstr("8589934592", &multiarena_allocator, &test_ctx, &err);
+    bigint_t num1 = bigint_from_cstr("4294967296", &arena_allocator, &test_ctx, &err);
+    bigint_t num2 = bigint_from_cstr("2", &arena_allocator, &test_ctx, &err);
+    bigint_t expected_result = bigint_from_cstr("8589934592", &arena_allocator, &test_ctx, &err);
 
     bigint_mul_in(&num1, &num2);
 
@@ -226,11 +228,11 @@ static void test_multiplication() {
         TEST_FAIL("Multiply positive numbers");
     }
 
-    multiarena_reset(&test_ctx);
+    arena_reset(&test_ctx);
 
-    num1 = bigint_from_cstr("10", &multiarena_allocator, &test_ctx, &err);
-    num2 = bigint_from_cstr("100000000000", &multiarena_allocator, &test_ctx, &err);
-    expected_result = bigint_from_cstr("1000000000000", &multiarena_allocator, &test_ctx, &err);
+    num1 = bigint_from_cstr("10", &arena_allocator, &test_ctx, &err);
+    num2 = bigint_from_cstr("100000000000", &arena_allocator, &test_ctx, &err);
+    expected_result = bigint_from_cstr("1000000000000", &arena_allocator, &test_ctx, &err);
 
     bigint_mul_in(&num1, &num2);
 
@@ -240,11 +242,11 @@ static void test_multiplication() {
         TEST_FAIL("Multiply positive numbers with (binary) carry");
     }
 
-    multiarena_reset(&test_ctx);
+    arena_reset(&test_ctx);
 
-    num1 = bigint_from_cstr("-10", &multiarena_allocator, &test_ctx, &err);
-    num2 = bigint_from_cstr("-100000000000", &multiarena_allocator, &test_ctx, &err);
-    expected_result = bigint_from_cstr("1000000000000", &multiarena_allocator, &test_ctx, &err);
+    num1 = bigint_from_cstr("-10", &arena_allocator, &test_ctx, &err);
+    num2 = bigint_from_cstr("-100000000000", &arena_allocator, &test_ctx, &err);
+    expected_result = bigint_from_cstr("1000000000000", &arena_allocator, &test_ctx, &err);
 
     bigint_mul_in(&num1, &num2);
 
@@ -254,11 +256,11 @@ static void test_multiplication() {
         TEST_FAIL("Multiply negative numbers");
     }
 
-    multiarena_reset(&test_ctx);
+    arena_reset(&test_ctx);
 
-    num1 = bigint_from_cstr("-10", &multiarena_allocator, &test_ctx, &err);
-    num2 = bigint_from_cstr("100000000000", &multiarena_allocator, &test_ctx, &err);
-    expected_result = bigint_from_cstr("-1000000000000", &multiarena_allocator, &test_ctx, &err);
+    num1 = bigint_from_cstr("-10", &arena_allocator, &test_ctx, &err);
+    num2 = bigint_from_cstr("100000000000", &arena_allocator, &test_ctx, &err);
+    expected_result = bigint_from_cstr("-1000000000000", &arena_allocator, &test_ctx, &err);
 
     bigint_mul_in(&num1, &num2);
 
@@ -268,16 +270,16 @@ static void test_multiplication() {
         TEST_FAIL("Multiply positive and negative numbers");
     }
 
-    multiarena_reset(&test_ctx);
+    arena_reset(&test_ctx);
 
-    multiarena_free_all(&test_ctx);
+    arena_destroy(&test_ctx);
 }
 
 static void test_division() {
 
     error_t err = {0};
-    const allocator_t *allocator = &multiarena_allocator;
-    multiarena_context_t test_ctx = { .inner_alloc = &global_std_allocator };
+    const allocator_t *allocator = &arena_allocator;
+    arena_context_t test_ctx = arena_init(4096, ARENA_FAST_ALLOC | ARENA_VIRTUAL_BACKEND | ARENA_GROWABLE, NULL, NULL);
 
     bigint_t num1, num2;
     divmod_t expected, actual;
@@ -367,7 +369,7 @@ static void test_division() {
                     );
         }
 
-        multiarena_reset(&test_ctx);
+        arena_reset(&test_ctx);
     }
 
 
@@ -411,7 +413,7 @@ static void test_division() {
                     );
         }
 
-        multiarena_reset(&test_ctx);
+        arena_reset(&test_ctx);
     }
 
 
@@ -455,7 +457,7 @@ static void test_division() {
                     );
         }
 
-        multiarena_reset(&test_ctx);
+        arena_reset(&test_ctx);
     }
 
     for (size_t i = 0; i < sizeof (positive_by_negative) / sizeof (char*); i += 4) {
@@ -498,11 +500,11 @@ static void test_division() {
                     );
         }
 
-        multiarena_reset(&test_ctx);
+        arena_reset(&test_ctx);
     }
 
 
-    multiarena_free_all(&test_ctx);
+    arena_destroy(&test_ctx);
 }
 
 int main(void)

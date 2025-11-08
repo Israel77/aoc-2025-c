@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "../test.h"
+#include "../macros.h"
 
 #define ALLOC_ARENA_IMPL
 #include "../allocator.h"
@@ -136,7 +136,7 @@ static void test_delete_multiple(void) {
 
     /* Store the keys and values in an arena to ensure they will outlive the hashmap */
     uint8_t *buffer = malloc(4096);
-    arena_context_t *test_arena = arena_init(buffer, 4096);
+    arena_context_t *test_arena = arena_from_buf(buffer, 4096);
 
     /* Insert a set of keys */
     static const char *keys[]   = {"apple", "banana", "cherry", "date", "elderberry"};
@@ -212,7 +212,7 @@ static void test_delete_compress(void) {
 
     /* Store the keys and values in an arena to ensure they will outlive the hashmap */
     uint8_t *buffer = malloc(4096);
-    arena_context_t *test_arena = arena_init(buffer, 4096);
+    arena_context_t *test_arena = arena_from_buf(buffer, 4096);
 
     for (int64_t i = 0; i < 100; ++i) {
         int64_t *k = arena_alloc(test_arena, sizeof (int64_t));
@@ -277,7 +277,7 @@ static void test_resize(void) {
 
     /* arena allocator for the strings */
     uint8_t buffer[1024];
-    arena_context_t *arena_ctx = arena_init(buffer, 1024);
+    arena_context_t *arena_ctx = arena_from_buf(buffer, 1024);
 
 
     for (int i = 0; i < 20; ++i) {
@@ -315,7 +315,6 @@ static void test_resize(void) {
  *  Main – run all tests and report totals
  * ------------------------------------------------------------- */
 int main(void) {
-    UNUSED(multiarena_allocator);
     printf("--- Start tests: Hashmap ---\n");
     test_init();
     test_insert_one();

@@ -57,7 +57,7 @@ void *p1_solve(void *arg) {
     sync(ctx);
 
     if (ctx-> thread_idx == 0) {
-        string_builder_t sb = sb_from_u64(p1.result, &multiarena_allocator, ctx->common->arena);
+        string_builder_t sb = sb_from_u64(p1.result, &arena_allocator, ctx->common->arena);
         ctx->common->output = sb_build(&sb);
     }
 
@@ -69,13 +69,13 @@ static string_array_t p1_split_input(struct part_context *ctx) {
 
     array_info_t p1_arr_info = {
         .item_size = sizeof (*p1.nums.items),
-        .allocator = &multiarena_allocator,
+        .allocator = &arena_allocator,
         .alloc_ctx = ctx->common->arena,
     };
 
     p1.nums.array_info = p1_arr_info;
 
-    string_array_t str = string_split_by_char(ctx->common->input, '\n', &multiarena_allocator, ctx->common->arena);
+    string_array_t str = string_split_by_char(ctx->common->input, '\n', &arena_allocator, ctx->common->arena);
     p1.nums.items = da_reserve(p1.nums.items, &p1.nums.array_info, str.array_info.count);
 
     assert(p1.nums.items && "Could not allocate memory");

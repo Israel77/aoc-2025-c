@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <unistd.h>
 
 #ifndef STD_ALLOC_IMPL
 #define STD_ALLOC_IMPL
@@ -16,7 +17,7 @@
 #include "../string_utils.h"
 
 #include "../error.h"
-#include "../test.h"
+#include "../macros.h"
 
 static int tests_passed = 0;
 static int tests_failed = 0;
@@ -255,8 +256,8 @@ static void test_string_parse_u64_unsafe() {
 
 static void test_sb_reversion() {
 
-    const allocator_t *a = &multiarena_allocator;
-    multiarena_context_t ctx = {.inner_alloc = &global_std_allocator, .inner_ctx = NULL};
+    const allocator_t *a = &arena_allocator;
+    arena_context_t ctx = arena_init(64, ARENA_MALLOC_BACKEND, NULL, NULL);
 
     string_builder_t base = sb_from_cstr("123456789", a, &ctx);
     string_builder_t rev = sb_from_cstr("987654321", a, &ctx);
@@ -267,7 +268,7 @@ static void test_sb_reversion() {
     if (ok) TEST_OK("string buffer can be reversed");
     else    TEST_FAIL("string buffer reversion did not work");
 
-    multiarena_free_all(&ctx);
+    arena_allocator.free_all(&ctx);
 }
 
 
