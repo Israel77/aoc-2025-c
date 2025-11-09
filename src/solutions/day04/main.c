@@ -12,9 +12,6 @@ static arena_context_t solution_arena;
 static string_t read_file();
 static inline void setup();
 
-#define max(a, b) ((a) > (b)) ? (a) : (b)
-#define min(a, b) ((a) < (b)) ? (a) : (b)
-
 static pthread_t threads[MAX_THREADS];
 
 static struct part_context_common p1_common;
@@ -31,6 +28,8 @@ int main(void) {
     volatile uint64_t clock_end;
 
     setup();
+
+    printf("\n==== Day 4 ====\n");
 
 #ifdef TEST_IMPL
     run_tests();

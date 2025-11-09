@@ -14,7 +14,6 @@ struct p2_data {
 static p2_data p2;
 
 /* Functions for part 2 */
-static inline void calculate_rating(string_t *input);
 static inline void calculate_oxygen_rating(string_t *input);
 static inline void calculate_co2_rating(string_t *input);
 static inline void p2_setup(struct part_context *ctx);
