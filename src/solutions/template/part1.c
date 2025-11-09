@@ -1,7 +1,7 @@
 #include "prelude.h"
-#define PART_1_IMPL
+//#define PART_1_IMPL
 
-#define P1_THREADS 2
+#define P1_THREADS 1
 
 /* Shared data between threads */
 struct p1_data {
@@ -16,16 +16,23 @@ void *p1_solve(void *arg) {
     struct part_context *ctx = arg;
 
     /* IO and synchronization */
+    pthread_barrier_t *barrier = &ctx->common->barrier;
     string_t *input = ctx->common->input;
     size_t thread_count = ctx->common->thread_count;
     size_t thread_idx   = ctx->thread_idx;
 
-    UNUSED(p1);
-    UNUSED(input);
-    UNUSED(thread_idx);
-    UNUSED(thread_count);
+    if (thread_idx == 0) {
+        p1_setup(ctx);
+    }
 
-    ctx->common->output = string_from_cstr("Not implemented yet!");
+    pthread_barrier_wait(barrier);
+
+    if (thread_idx == thread_count - 1) {
+        ctx->common->output = string_from_cstr("Not implemented yet!");
+    }
 
     return NULL;
+}
+
+static inline void p1_setup(struct part_context *ctx) {
 }

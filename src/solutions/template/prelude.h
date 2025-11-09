@@ -20,39 +20,40 @@
 #include <pthread.h> // IWYU pragma: export
 #include <stdatomic.h> // IWYU pragma: export
 
-/* ----------------------------------------
- * Allocators
- * ---------------------------------------- */
+/* Allocators */
 #ifndef ALLOC_STD_IMPL
 #define ALLOC_STD_IMPL
 #endif
+#ifndef ALLOC_ARENA_IMPL
 #define ALLOC_ARENA_IMPL
+#endif
 #include "../../utils/allocator.h" // IWYU pragma: export
 
-/* ----------------------------------------
- * Dynamic arrays
- * ---------------------------------------- */
+/* Dynamic arrays */
 #include "../../utils/da.h" // IWYU pragma: export
 
-/* ----------------------------------------
- * Strings
- * ---------------------------------------- */
+/* Strings */
 #define STRING_UTILS_IMPL
 #include "../../utils/string_utils.h" // IWYU pragma: export
 
 
-/* ----------------------------------------
- * Interface to be implemented
- * ---------------------------------------- */
+
+/* Structure for testing */
+typedef struct p1_test_data p1_test_data;
+typedef struct p2_test_data p2_test_data;
+
+static inline void test_p1();
+static inline void test_p2();
 
 /* Infrastructure for each part */
-
 struct part_context_common {
-    string_t *input;
-    size_t thread_count;
-    arena_context_t *arena;
-    string_t output;
     pthread_barrier_t barrier;
+    size_t            thread_count;
+    string_t          output;
+    string_t         *input;
+    arena_context_t  *arena;
+    void             *test_data;
+    bool             is_test;
 };
 
 struct part_context {
@@ -64,9 +65,14 @@ struct part_context {
 typedef struct p1_data p1_data;
 typedef struct p2_data p2_data;
 
+
+static inline void p1_setup(struct part_context *ctx);
 void *p1_solve(void *ctx);
+
+static inline void p2_setup(struct part_context *ctx);
 void *p2_solve(void *ctx);
 
+/* Common utilities */
 static inline void sync(struct part_context *ctx) {
     if (ctx->common->thread_count > 1) pthread_barrier_wait(&ctx->common->barrier);
 }
