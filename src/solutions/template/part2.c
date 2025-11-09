@@ -16,16 +16,17 @@ void *p2_solve(void *arg) {
     struct part_context *ctx = arg;
 
     /* IO and synchronization */
-    pthread_barrier_t *barrier = &ctx->common->barrier;
     string_t *input = ctx->common->input;
     size_t thread_count = ctx->common->thread_count;
     size_t thread_idx   = ctx->thread_idx;
+
+    UNUSED(p2);
+    UNUSED(input);
 
     if (thread_idx == 0) {
         p2_setup(ctx);
     }
 
-    pthread_barrier_wait(barrier);
 
     if (thread_idx == thread_count - 1) {
         ctx->common->output = string_from_cstr("Not implemented yet!");
@@ -35,4 +36,5 @@ void *p2_solve(void *arg) {
 }
 
 static inline void p2_setup(struct part_context *ctx) {
+    UNUSED(ctx);
 }
