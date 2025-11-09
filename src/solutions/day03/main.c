@@ -1,6 +1,7 @@
 #include "prelude.h"
 #include "part1.c"
 #include "part2.c"
+#include "tests.c"
 
 #define FILE_CAP 100 * 8 * 1024
 #define MAX_THREADS 32
@@ -34,6 +35,8 @@ int main(void) {
     clock_start_total = now_ns();
 
     printf("==== Day 3 ====\n");
+
+    run_tests();
 
 #ifdef PART_1_IMPL
     printf("Solution to part 1:\n");

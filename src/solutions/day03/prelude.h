@@ -51,11 +51,13 @@
 /* Infrastructure for each part */
 
 struct part_context_common {
-    string_t *input;
-    size_t thread_count;
-    arena_context_t *arena;
-    string_t output;
+    size_t            thread_count;
     pthread_barrier_t barrier;
+    string_t          output;
+    arena_context_t   *arena;
+    string_t          *input;
+    void              *test_data;
+    bool              is_test;
 };
 
 struct part_context {
@@ -67,8 +69,16 @@ struct part_context {
 typedef struct p1_data p1_data;
 typedef struct p2_data p2_data;
 
+/* Modified parameters for testing, if necessary */
+struct test_data {
+    size_t p2_lines;
+    size_t p2_bits;
+};
+
 void *p1_solve(void *ctx);
 void *p2_solve(void *ctx);
+
+static inline void run_tests(void);
 
 static inline void sync(struct part_context *ctx) {
     if (ctx->common->thread_count > 1) pthread_barrier_wait(&ctx->common->barrier);
