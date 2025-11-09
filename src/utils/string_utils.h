@@ -220,7 +220,8 @@ string_array_t string_split_by_char(const string_t *str, const char delimiter, c
         .array_info = {
             .item_size = sizeof (string_t),
             .allocator = allocator,
-            .alloc_ctx = alloc_ctx
+            .alloc_ctx = alloc_ctx,
+            .min_capacity = 8
         }
     };
 

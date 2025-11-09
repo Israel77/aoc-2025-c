@@ -364,7 +364,7 @@ static inline void *arena_alloc_aligned(void *ctx, const size_t size, const size
 
     if (result == NULL) {
         /* We need to allocate memory for the metadata about the region */
-        uint64_t new_capacity = max(try_region->capacity * 2, size);
+        uint64_t new_capacity = max(try_region->capacity * 2, size + alignment + sizeof (arena_region_t));
 
         if (arena->flags & ARENA_MALLOC_BACKEND) {
 

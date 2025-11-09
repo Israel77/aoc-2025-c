@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
+#include <strings.h>
 
 #ifndef DA_INIT_CAP
 #define DA_INIT_CAP 256
@@ -61,23 +62,34 @@ static void *da_append(void *array, array_info_t *info, const void *item) {
     return result;
 }
 
-static inline void da_reverse(void *array, const array_info_t *info) {
+static inline void da_swap(void *array, const array_info_t *info, size_t idx_a, size_t idx_b) {
+
     uint8_t temp[info->item_size];
 
-    uint8_t *start = (uint8_t*) array;
-    uint8_t *end   = start + (info->count - 1) * info->item_size;
+    uint8_t *bytes = (uint8_t*)array;
+
+    size_t offset_a = idx_a * info->item_size;
+    size_t offset_b = idx_b * info->item_size;
+    for (size_t j = 0; j < info->item_size; ++j) {
+        temp[j] = bytes[offset_a + j];
+        bytes[offset_a + j] = bytes[offset_b + j];
+        bytes[offset_b + j] = temp[j];
+    }
+}
+
+static inline void da_reverse(void *array, const array_info_t *info) {
+
+    size_t start = 0;
+    size_t end   = info->count - 1;
 
     for (size_t i = 0; i < info->count / 2; ++i) {
-        size_t offset = i * info->item_size;
-        /* memcpy(temp          , start + offset, info->item_size); */
-        /* memcpy(start + offset, end - offset  , info->item_size); */
-        /* memcpy(end - offset  , temp          , info->item_size); */
-        for (size_t j = 0; j < info->item_size; ++j) {
-            temp[j] = start[offset + j];
-            start[offset +  j] = *(end - offset + j);
-            *(end - offset + j) = temp[j];
-        }
+        da_swap(array, info, start + i, end - i);
     }
+}
+
+static inline void da_remove_unordered(void *array, array_info_t *info, size_t index) {
+    da_swap(array, info, index, info->count - 1);
+    info->count--;
 }
 
 static inline bool da_equals(const void *array1, const array_info_t *info1,
