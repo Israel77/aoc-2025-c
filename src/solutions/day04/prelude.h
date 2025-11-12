@@ -83,4 +83,69 @@ static inline uint64_t now_ns(void) {
     return (uint64_t)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
 }
 
+/* Common structures for both parts */
+
+#define MAX_BINGO_NUMS 100
+#define BINGO_BOARD_ROWS 5
+#define BINGO_BOARD_COLS 5
+
+typedef struct {
+    uint8_t value;
+    bool    marked;
+} board_t[BINGO_BOARD_COLS][BINGO_BOARD_ROWS];
+
+typedef struct {
+    array_info_t array_info;
+    board_t *items;
+} board_array_t;
+
+typedef struct {
+    uint8_t results[MAX_BINGO_NUMS];
+    uint8_t result_count;
+    board_array_t boards;
+} bingo_t;
+
+typedef struct {
+    array_info_t array_info;
+    uint8_t *items;
+} u8_array_t;
+
+static inline void mark_result(board_t board, uint8_t result) {
+
+    for (size_t row = 0; row < BINGO_BOARD_ROWS; ++row) {
+        for (size_t col = 0; col < BINGO_BOARD_COLS; ++col) {
+            if (board[row][col].value == result)
+                board[row][col].marked = true;
+        }
+    }
+}
+
+static inline bool is_winner(board_t board) {
+
+    /* Check rows */
+    for (size_t row = 0; row < BINGO_BOARD_ROWS; ++row) {
+        bool winning_row = true;
+
+        for (size_t col = 0; col < BINGO_BOARD_COLS; ++col) {
+            winning_row &= board[row][col].marked;
+        }
+
+        if (winning_row) return true;
+    }
+
+    /* Check columns */
+    for (size_t col = 0; col < BINGO_BOARD_COLS; ++col) {
+        bool winning_col = true;
+
+        for (size_t row = 0; row < BINGO_BOARD_ROWS; ++row) {
+            winning_col &= board[row][col].marked;
+        }
+
+        if (winning_col) return true;
+    }
+
+    return false;
+}
+
+
 #endif /* ifndef PRELUDE_H */

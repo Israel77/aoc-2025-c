@@ -3,31 +3,6 @@
 
 #define P1_THREADS 1
 
-#define MAX_BINGO_NUMS 250
-#define BINGO_BOARD_ROWS 5
-#define BINGO_BOARD_COLS 5
-
-typedef struct {
-    uint8_t value;
-    bool    marked;
-} board_t[BINGO_BOARD_COLS][BINGO_BOARD_ROWS];
-
-typedef struct {
-    array_info_t array_info;
-    board_t *items;
-} board_array_t;
-
-typedef struct {
-    uint8_t results[MAX_BINGO_NUMS];
-    uint8_t result_count;
-    board_array_t boards;
-} bingo_t;
-
-typedef struct {
-    array_info_t array_info;
-    uint8_t *items;
-} u8_array_t;
-
 /* Shared data between threads */
 struct p1_data {
     bingo_t bingo;
@@ -85,6 +60,9 @@ void *p1_solve(void *arg) {
         ctx->common->output = sb_build(&sb);
     }
 
+    pthread_mutex_destroy(&p1.arena_mtx);
+    pthread_mutex_destroy(&p1.winner_mtx);
+
     return NULL;
 }
 
@@ -93,10 +71,7 @@ static inline uint64_t build_answer() {
     uint64_t unmarked_total = 0;
 
     uint8_t winner_round = atomic_load(&p1.winner_round);
-
-    pthread_mutex_lock(&p1.winner_mtx);
     size_t winner_idx = p1.winner_idx;
-    pthread_mutex_unlock(&p1.winner_mtx);
 
 
     for (size_t row = 0; row < BINGO_BOARD_ROWS; ++row) {
@@ -143,43 +118,6 @@ static inline void p1_parse_results() {
             sb = sb_with_capacity(3, &arena_allocator, temp_buf);
         }
     }
-}
-
-static inline void mark_result(board_t board, uint8_t result) {
-
-    for (size_t row = 0; row < BINGO_BOARD_ROWS; ++row) {
-        for (size_t col = 0; col < BINGO_BOARD_COLS; ++col) {
-            if (board[row][col].value == result)
-                board[row][col].marked = true;
-        }
-    }
-}
-
-static inline bool is_winner(board_t board) {
-
-    /* Check rows */
-    for (size_t row = 0; row < BINGO_BOARD_ROWS; ++row) {
-        bool winning_row = true;
-
-        for (size_t col = 0; col < BINGO_BOARD_COLS; ++col) {
-            winning_row &= board[row][col].marked;
-        }
-
-        if (winning_row) return true;
-    }
-
-    /* Check columns */
-    for (size_t col = 0; col < BINGO_BOARD_COLS; ++col) {
-        bool winning_col = true;
-
-        for (size_t row = 0; row < BINGO_BOARD_ROWS; ++row) {
-            winning_col &= board[row][col].marked;
-        }
-
-        if (winning_col) return true;
-    }
-
-    return false;
 }
 
 static inline void check_own_boards(struct part_context *ctx) {
@@ -297,12 +235,3 @@ static inline void p1_setup(struct part_context *ctx) {
         arena_reset(temp);
     }
 }
-/*
-"7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1\n"
-"\n"
-"22 13 17 11  0\n"
-" 8  2 23  4 24\n"
-"21  9 14 16  7\n"
-" 6 10  3 18  5\n"
-" 1 12 20 15 19\n"
-*/
