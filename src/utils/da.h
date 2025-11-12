@@ -48,7 +48,9 @@ static void *da_reserve(void *array, array_info_t *info, size_t expected_capacit
      return result;
 }
 
-static void *da_append(void *array, array_info_t *info, const void *item) {
+/* Like da_append, but does not increase the count. Useful for SOA-based code. */
+static void *da_append_no_count(void *array, array_info_t *info, const void *item) {
+
     void *result = array;
 
     size_t offset = info->count * info->item_size;
@@ -57,6 +59,14 @@ static void *da_append(void *array, array_info_t *info, const void *item) {
     for (size_t i = 0; i < info->item_size; ++i) {
         *((char*)result + offset + i) = *((char*)item + i);
     }
+
+    return result;
+}
+
+static void *da_append(void *array, array_info_t *info, const void *item) {
+    void *result = array;
+
+    da_append_no_count(array, info, item);
     info->count++;
 
     return result;
