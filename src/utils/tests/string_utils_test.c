@@ -214,46 +214,6 @@ static void test_sb_build(void) {
                         sb.array_info.capacity * sizeof(char));
 }
 
-static void test_string_parse_u64_safe() {
-    error_t  err = {0};
-    string_t str = string_from_cstr("123456789");
-
-    int64_t num = string_parse_i64_safe(&str, &err);
-
-    bool ok = !err.is_error;
-
-    ok &= (num == 123456789);
-
-    if (ok) TEST_OK("string_parse_i64_safe parses correctly");
-    else    TEST_FAIL("string_parse_i64_safe did not work");
-}
-
-static void test_string_parse_u64_safe_overflow() {
-    error_t  err = {0};
-    string_t str = string_from_cstr("123456789012345678912346579");
-
-    string_parse_i64_safe(&str, &err);
-
-    bool ok = err.is_error;
-
-    if (ok) TEST_OK("string_parse_i64_safe rejects numbers that would overflow");
-    else    TEST_FAIL("string_parse_i64_safe did not work correctly");
-}
-
-static void test_string_parse_u64_unsafe() {
-    error_t  err = {0};
-    string_t str = string_from_cstr("123456789");
-
-    int64_t num = string_parse_i64_unsafe(&str, &err);
-
-    bool ok = !err.is_error;
-
-    ok &= (num == 123456789);
-
-    if (ok) TEST_OK("string_parse_i64_unsafe parses correctly");
-    else    TEST_FAIL("string_parse_i64_unsafe did not work");
-}
-
 static void test_sb_reversion() {
 
     const allocator_t *a = &arena_allocator;
@@ -286,9 +246,6 @@ int main(void) {
     test_sb_append_sb();
     test_string_split_by_char();
     test_sb_build();
-    test_string_parse_u64_safe();
-    test_string_parse_u64_safe_overflow();
-    test_string_parse_u64_unsafe();
     test_sb_reversion();
 
     printf("--- Summary: String utilities ---\n");

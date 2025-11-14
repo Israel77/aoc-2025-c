@@ -509,7 +509,6 @@ static void test_division() {
 
 int main(void)
 {
-    UNUSED(arena_allocator);
 
     printf("\n--- Start tests: Bigint ---\n");
     test_encoding_decoding();

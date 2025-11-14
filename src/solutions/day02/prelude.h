@@ -39,6 +39,7 @@
  * ---------------------------------------- */
 #define STRING_UTILS_IMPL
 #include "../../utils/string_utils.h" // IWYU pragma: export
+#include "../../utils/parsing_helpers.h" // IWYU pragma: export
 
 
 /* ----------------------------------------

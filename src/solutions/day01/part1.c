@@ -38,7 +38,8 @@ void *p1_solve(void *arg) {
     const size_t end   = start + tasks_per_thread + (ctx->thread_idx < remaining);
 
     for (size_t i = start; i < end; ++i) {
-        p1.nums.items[i] = string_parse_u64_unsafe(&p1.strings.items[i], NULL);   
+        string_t _;
+        p1.nums.items[i] = parse_u64(&p1.strings.items[i], &_);   
     }
 
     uint16_t local_incr = 0;

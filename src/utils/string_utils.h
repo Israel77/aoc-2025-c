@@ -3,7 +3,6 @@
 
 #include "da.h"
 #include "allocator.h"
-#include "error.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -59,29 +58,11 @@ bool string_equals(const string_t *str, const string_t *other);
 string_array_t string_split_by_char(const string_t *str, const char delimiter, const allocator_t *allocator, void *alloc_ctx);
 string_array_t string_split_by_str(const string_t *str, const string_t *delimiter, const allocator_t *allocator, void *alloc_ctx);
 
-string_t string_trim_left(const string_t *str);
-string_t string_trim_right(const string_t *str);
-string_t string_trim(const string_t *str);
-
 void string_print(const string_t *str);
 void string_println(const string_t *str);
 void string_sprint(char *buffer, const string_t *str);
 void string_sprintln(char *buffer, const string_t *str);
 
-/*//////////////////////////////////////////////////////// */
-/* Parse strings to integer types (only supports decimals). Safe versions do bound checks, while unsafe versions parse optmistically */
-
-/* Parse string into a signed 64-bit integer. Returns an error if the string is not a valid number. */
-int64_t string_parse_i64_safe(const string_t *str, error_t *err);
-/* Parse string into a signed 64-bit integer. Never returns an error, the parameter is just for compatibility with safe versions. */
-int64_t string_parse_i64_unsafe(const string_t *str, error_t *err);
-
-/* Parse string into an unsigned 64-bit integer. Returns an error if the string is not a valid number. */
-uint64_t string_parse_u64_safe(const string_t *str, error_t *err);
-/* Parse string into an unsigned 64-bit integer. Never returns an error, the parameter is just for compatibility with safe versions. */
-uint64_t string_parse_u64_unsafe(const string_t *str, error_t *err);
-
-/*//////////////////////////////////////////////////////// */
 /* Convert integer types to strings */
 string_builder_t sb_from_u64(const uint64_t value, const allocator_t *allocator, void *alloc_ctx);
 
@@ -132,6 +113,34 @@ string_builder_t sb_with_capacity(const size_t capacity, const allocator_t *allo
     if (sb.items) {
         sb.items[0] = '\0';
     }
+
+    return sb;
+}
+
+/* Creates a new string builder from a file */
+string_builder_t sb_read_file(FILE *file, const allocator_t *allocator, void *alloc_ctx) {
+    string_builder_t sb = {
+        .array_info = {
+            .item_size = sizeof (char),
+            .allocator = allocator,
+            .alloc_ctx = alloc_ctx
+        }
+    };
+
+    string_builder_t temp_sb = {
+        .array_info = {
+            .item_size = sizeof (char),
+            .allocator = allocator,
+            .alloc_ctx = alloc_ctx
+        }
+    };
+    temp_sb.items = da_reserve(temp_sb.items, &temp_sb.array_info, 1024);
+
+    while (fgets(temp_sb.items, temp_sb.array_info.capacity, file)) {
+        temp_sb.array_info.count = strlen(temp_sb.items);
+        sb_append_sb(&sb, &temp_sb);
+    }
+    allocator->free(temp_sb.items, alloc_ctx, temp_sb.array_info.capacity * sizeof (*sb.items));
 
     return sb;
 }
@@ -299,265 +308,6 @@ string_array_t string_split_by_str(const string_t *str, const string_t *delimite
     return result;
 }
 
-int64_t string_parse_i64_safe(const string_t *str, error_t *err) {
-
-    err->is_error = false;
-
-    int64_t result = 0;
-    /* 0 is +, 1 is - */
-    const char PLUS = 0;
-    const char MINUS = 1;
-    char sign;
-
-    if (str->chars[0] != '+' && str->chars[0] != '-' && (str->chars[0] < '0' || str->chars[0] > '9')) {
-        sprintf(err->error_msg, "Invalid initial character. Expected digit, found: %c", str->chars[0]);
-        err->is_error = true;
-        return result;
-    }
-
-    size_t i = 0;
-    if (str->chars[0] == '+') {
-        sign = PLUS;
-        ++i;
-    } else if (str->chars[0] == '-'){
-        sign = MINUS;
-        ++i;
-    } else {
-        sign = PLUS;
-    }
-
-    if (i == str->count) {
-        sprintf(err->error_msg, "No digits were found in the string");
-        err->is_error = true;
-        return result;
-    }
-
-    for (size_t i = 0; i < str->count; ++i) {
-        if (str->chars[i] < '0' || str->chars[i] > '9') {
-            sprintf(err->error_msg, "Error while parsing integer. Invalid digit at position %ld", i);
-            err->is_error = true;
-            return result;
-        }
-        char digit = str->chars[i] - '0';
-
-        /* Positive conversion */
-        if (sign == PLUS) {
-            if (result > (INT64_MAX - digit) / 10) {
-                sprintf(err->error_msg, "Integer overflow");
-                err->is_error = true;
-                return result;
-            } else {
-                result = result * 10 + digit;
-            }
-        }
-        /* Negative conversion */
-        else {
-            if (result > (INT64_MAX + digit) / 10) {
-                sprintf(err->error_msg, "Integer overflow");
-                err->is_error = true;
-                return result;
-            } else {
-                result = result * 10 - digit;
-            }
-        }
-    }
-
-    return result;
-}
-
-int64_t string_parse_i64_unsafe(const string_t *str, error_t *err) {
-
-    /* This function never actually errors but the parameters is maintained */
-    /* for ease of refactoring after using the safe version */
-    if (err != NULL) err->is_error = false;
-
-    int64_t result = 0;
-    /* 0 is +, 1 is - */
-    const char PLUS = 0;
-    const char MINUS = 1;
-    char sign;
-
-    size_t i = 0;
-    while (str->chars[i] != '+' && str->chars[i] != '-' && (str->chars[i] < '0' || str->chars[i] > '9')) {
-        ++i;
-    }
-
-    if (str->chars[i] == '+') {
-        sign = PLUS;
-        ++i;
-    } else if (str->chars[i] == '-'){
-        sign = MINUS;
-        ++i;
-    } else {
-        sign = PLUS;
-    }
-
-    for (size_t i = 0; i < str->count; ++i) {
-        if (str->chars[i] < '0' || str->chars[i] > '9') {
-            continue;
-        }
-
-        char digit = str->chars[i] - '0';
-
-        /* Positive conversion */
-        if (sign == PLUS) {
-            result = result * 10 + digit;
-        }
-        /* Negative conversion */
-        else {
-            result = result * 10 - digit;
-        }
-    }
-
-    return result;
-}
-uint64_t string_parse_u64_safe(const string_t *str, error_t *err) {
-
-    err->is_error = false;
-
-    uint64_t result = 0;
-
-    if (str->chars[0] != '+' && str->chars[0] != '-' && (str->chars[0] < '0' || str->chars[0] > '9')) {
-        sprintf(err->error_msg, "Invalid initial character. Expected digit, found: %c", str->chars[0]);
-        err->is_error = true;
-        return result;
-    }
-
-    size_t i = 0;
-    if (str->chars[0] == '+') {
-        ++i;
-    }
-
-    if (i == str->count) {
-        sprintf(err->error_msg, "No digits were found in the string");
-        err->is_error = true;
-        return result;
-    }
-
-    for (size_t i = 0; i < str->count; ++i) {
-        if (str->chars[i] < '0' || str->chars[i] > '9') {
-            sprintf(err->error_msg, "Error while parsing integer. Invalid digit at position %ld", i);
-            err->is_error = true;
-            return result;
-        }
-        char digit = str->chars[i] - '0';
-
-        if (result > (UINT64_MAX - digit) / 10) {
-            sprintf(err->error_msg, "Integer overflow");
-            err->is_error = true;
-            return result;
-        } else {
-            result = result * 10 + digit;
-        }
-    }
-
-    return result;
-}
-
-uint64_t string_parse_u64_unsafe(const string_t *str, error_t *err) {
-
-    /* This function never actually errors but the parameters is maintained */
-    /* for ease of refactoring after using the safe version */
-    if (err != NULL) err->is_error = false;
-
-    uint64_t result = 0;
-
-    size_t i = 0;
-    while (str->chars[i] != '+' && (str->chars[i] < '0' || str->chars[i] > '9')) {
-        ++i;
-    }
-
-    for (size_t i = 0; i < str->count; ++i) {
-        if (str->chars[i] < '0' || str->chars[i] > '9') {
-            continue;
-        }
-
-        char digit = str->chars[i] - '0';
-
-        result = result * 10 + digit;
-    }
-
-    return result;
-}
-
-/* Creates a new string builder from a file */
-string_builder_t sb_read_file(FILE *file, const allocator_t *allocator, void *alloc_ctx) {
-    string_builder_t sb = {
-        .array_info = {
-            .item_size = sizeof (char),
-            .allocator = allocator,
-            .alloc_ctx = alloc_ctx
-        }
-    };
-
-    string_builder_t temp_sb = {
-        .array_info = {
-            .item_size = sizeof (char),
-            .allocator = allocator,
-            .alloc_ctx = alloc_ctx
-        }
-    };
-    temp_sb.items = da_reserve(temp_sb.items, &temp_sb.array_info, 1024);
-
-    while (fgets(temp_sb.items, temp_sb.array_info.capacity, file)) {
-        temp_sb.array_info.count = strlen(temp_sb.items);
-        sb_append_sb(&sb, &temp_sb);
-    }
-    allocator->free(temp_sb.items, alloc_ctx, temp_sb.array_info.capacity * sizeof (*sb.items));
-
-    return sb;
-}
-
-string_t string_trim_left(const string_t *str) {
-
-    string_t result = {
-        .chars = str->chars,
-        .count = str->count
-    };
-
-    /* Trim left */
-    char first_char = result.chars[0];
-    while (result.count > 0 && 
-            (first_char == ' ' || first_char == '\n' || first_char == '\t')) {
-        result.chars = &result.chars[1];
-        result.count--;
-
-        first_char = result.chars[0];
-    }
-
-    return result;
-}
-
-string_t string_trim_right(const string_t *str) {
-
-    string_t result = {
-        .chars = str->chars,
-        .count = str->count
-    };
-
-    /* Trim right */
-    char last_char;
-    if (result.count > 0) {
-        last_char = result.chars[result.count - 1];
-    }
-    while (result.count > 0 && 
-            (last_char == ' ' || last_char == '\n' || last_char == '\t')) {
-        last_char = result.chars[result.count - 1];
-        result.count--;
-
-        result.chars = &result.chars[result.count - 1];
-    }
-
-    return result;
-}
-
-string_t string_trim(const string_t *str) {
-
-    string_t result = string_trim_left(str);
-    result = string_trim_right(&result);
-
-    return result;
-}
 
 void string_print(const string_t *str) {
     printf("%.*s", (int)str->count, str->chars);

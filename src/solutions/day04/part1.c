@@ -111,7 +111,8 @@ static inline void p1_parse_results() {
 
         } else {
             string_t s = sb_build(&sb);
-            p1.bingo.results[p1.bingo.result_count] = (uint8_t)string_parse_u64_unsafe(&s, NULL);
+            string_t _;
+            p1.bingo.results[p1.bingo.result_count] = parse_u8(&s, &_);
             p1.bingo.result_count++;
 
             arena_reset(temp);
@@ -220,7 +221,8 @@ static inline void p1_setup(struct part_context *ctx) {
             size_t col = 0;
             for (size_t i = 0; i < nums_str.array_info.count; ++i) {
                 if (nums_str.items[i].count != 0) {
-                    uint64_t value  = string_parse_u64_unsafe(&nums_str.items[i], NULL);
+                    string_t _;
+                    uint64_t value  = parse_u64(&nums_str.items[i], &_);
                     board[row][col].value = value;
                     ++col;
                 }

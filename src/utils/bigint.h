@@ -31,7 +31,7 @@ static const uint8_t LOG_10_BASE = 2; //How many decimal digits
 
 typedef struct {
     array_info_t array_info;
-    uint64_t *items;
+    uint32_t *items;
     bool is_negative;
 } bigint_t;
 
@@ -93,6 +93,7 @@ void bigint_mul_in_u64(bigint_t *num, const uint64_t other);
 
 
 #ifdef BIGINT_IMPL
+#include "parsing_helpers.h"
 bigint_t bigint_with_capacity(size_t capacity, const allocator_t *allocator, void *alloc_ctx) {
 
     bigint_t result = {
@@ -157,8 +158,11 @@ bigint_t bigint_from_string(const string_t *str, const allocator_t *allocator, v
             .chars = &str->chars[i],
             .count = str->count - i,
         };
-        /* This casting is safe because of the above check, as long as BASE <= UINT32_MAX */
-        uint64_t value_u64 = (uint64_t)(string_parse_u64_safe(&updated_view, err) % BASE);
+
+        string_t rest;
+
+        /* This parsing is safe because of the above check, as long as BASE <= UINT32_MAX */
+        uint64_t value_u64 = parse_u64(&updated_view, &rest) % BASE;
 
         result.items = da_append(result.items, &result.array_info, &value_u64);
         goto defer;
