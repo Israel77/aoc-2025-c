@@ -66,7 +66,7 @@ static void *da_append_no_count(void *array, array_info_t *info, const void *ite
 static void *da_append(void *array, array_info_t *info, const void *item) {
     void *result = array;
 
-    da_append_no_count(array, info, item);
+    result = da_append_no_count(array, info, item);
     info->count++;
 
     return result;
