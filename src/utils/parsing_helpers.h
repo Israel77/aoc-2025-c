@@ -274,30 +274,38 @@ static void skip_while(const string_t *src, string_t *rest, string_predicate tes
  */
 static void skip_until(const string_t *src, string_t *rest, string_predicate test);
 
-static inline uint64_t parse_unsigned(const string_t *src, string_t *rest, uint64_t max_value) {
+static inline uint64_t parse_unsigned(const string_t *const src, string_t *rest, uint64_t max_value) {
 
     uint64_t result = 0;
-
-    *rest = *src;
 
     if (src->chars[0] != '+' && (src->chars[0] < '0' || src->chars[0] > '9')) {
         return result;
     }
 
+    *rest = *src;
+
+    /* Copy the values to avoid breaking invariants in case src and rest are the same pointer */
+    const size_t src_count = src->count;
+    const char *src_chars = src->chars;
+
     size_t i = 0;
-    if (src->chars[0] == '+') {
+    if (src_chars[0] == '+') {
         ++i;
         if(rest->count > 1)rest->count--;
     }
 
-    if (i == src->count) {
+    if (i == src_count) {
         return result;
     }
 
-    while (i < src->count && ('0' <= src->chars[i] && src->chars[i] <= '9')) {
+    while (i < src_count) {
 
-        char digit = src->chars[i] - '0';
-        rest->chars = &src->chars[i];
+        char digit = src_chars[i] - '0';
+        rest->chars = &src_chars[i];
+
+        if ('0' > rest->chars[0] || rest->chars[0] > '9') {
+            return result;
+        }
 
         if (unlikely(result > (max_value - digit) / 10)) {
             return result;
@@ -320,17 +328,21 @@ static inline int64_t parse_signed(const string_t *src, string_t *rest, int64_t 
 
     *rest = *src;
 
+    /* Copy the values to avoid breaking invariants in case src and rest are the same pointer */
+    const size_t src_count = src->count;
+    const char *src_chars = src->chars;
+
     if ((src->chars[0] != '+' && src->chars[0] != '-') && (src->chars[0] < '0' || src->chars[0] > '9')) {
         return result;
     }
 
     size_t i = 0;
-    if (src->chars[0] == '+') {
+    if (src_chars[0] == '+') {
 
         ++i;
         if(rest->count > 1) rest->count--;
 
-    } else if (src->chars[0] == '-') {
+    } else if (src_chars[0] == '-') {
 
         is_negative = true;
         ++i;
@@ -341,10 +353,14 @@ static inline int64_t parse_signed(const string_t *src, string_t *rest, int64_t 
         return result;
     }
 
-    while (i < src->count && ('0' <= src->chars[i] && src->chars[i] <= '9')) {
+    while (i < src_count) {
 
-        char digit = src->chars[i] - '0';
-        rest->chars = &src->chars[i];
+        char digit = src_chars[i] - '0';
+        rest->chars = &src_chars[i];
+
+        if ('0' > rest->chars[0] || rest->chars[0] > '9') {
+            return result;
+        }
 
         if (is_negative) {
 
@@ -441,9 +457,11 @@ static void skip_n_chars(const string_t *src, string_t *rest, size_t count) {
 
     *rest = *src;
 
-    for (size_t i = 0; i < count && i < src->count; ++i) {
-        rest->count--;
-        rest->chars = &rest->chars[1];
+    if (count <= src->count) {
+        rest->count -= count;
+        rest->chars  = &rest->chars[count];
+    } else {
+        rest->count = 0;
     }
 
 }

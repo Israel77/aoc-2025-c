@@ -26,8 +26,12 @@
 /* Align x up to a multiple of n where n is a power of 2 */
 #define ALIGN_POW_2(x, n) (( (x) + ( (n) - 1 )) & ~( (n) - 1 ))
 
+#define PROF_START(x) { const char *section = (x); uint64_t __clock_start = now_ns();
+#define PROF_END  uint64_t __clock_end = now_ns(); printf("%s took: %'ld ns\n", section, __clock_end - __clock_start);}
+
 #define max(a, b) ((a) > (b)) ? (a) : (b)
 #define min(a, b) ((a) < (b)) ? (a) : (b)
+#define sign_of(x) ((x) == 0) ? (0) : (((x) > 0) ? (1) : (-1))
 
 #define KB(x) (x) * 1024
 #define MB(x) (x) * 1024 * 1024

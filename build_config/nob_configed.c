@@ -2,6 +2,8 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <threads.h>
+#include <unistd.h>
 
 #define NOB_IMPLEMENTATION
 #define NOB_WARN_DEPRECATED
@@ -43,9 +45,10 @@ static void include_utils_tests(void);
 static void include_solutions(void);
 static int build_from_src(void);
 static void include_info_only(void);
-static int gen_compile_commands(compile_commands_t *compile_commands);
+static int gen_compile_commands(void *compile_commands);
 static int run_programs(void);
 
+thrd_t compile_cmds_thread;
 
 int main(void)
 {
@@ -63,15 +66,16 @@ int main(void)
     result = build_from_src();
     if (result > 0) return result;
 
-
     if (GEN_COMPILE_COMMANDS) {
         include_info_only();
-        gen_compile_commands(&compile_commands);
+        thrd_create(&compile_cmds_thread, gen_compile_commands, &compile_commands);
     }
 
     if (RUN_PROGS) {
         result = run_programs();
     }
+
+    thrd_join(compile_cmds_thread, NULL);
 
     return result;
 }
@@ -206,12 +210,15 @@ static void include_utils_tests(void) {
     nob_da_append(&build_paths, "utils/tests/string_utils_test");
     nob_da_append(&build_paths, "utils/tests/bigint_test");
     nob_da_append(&build_paths, "utils/tests/hashmap_tests");
+    nob_da_append(&build_paths, "utils/tests/parsing_helpers_test");
 }
 
 void include_solutions(void) {
 
     // if (nob_file_exists("solutions/template/template.c") == 0)
     //     nob_da_append(&build_paths,"solutions/template/template");
+    //
+    if (COMPILE_SOLUTIONS[0] == -1) return;
     
     if (COMPILE_SOLUTIONS[0] == 0) {
         for (int day = 1; day <= 25; ++day) {
@@ -287,7 +294,7 @@ static int build_from_src(void) {
         // Optimized version
         nob_cc(cmd);
         nob_cc_flags(cmd);
-        nob_cmd_append(cmd, "-O3", "-g", "-std=c11", "-march=znver4", "-DALLOC_STD_IMPL");
+        nob_cmd_append(cmd, "-O3", "-g", "-Wno-unused-function", "-std=c11", "-DALLOC_STD_IMPL");
         nob_cc_output(cmd, output_file);
         nob_cc_inputs(cmd, input_file);
         
@@ -305,7 +312,7 @@ static int build_from_src(void) {
         // Debug version
         nob_cc(cmd_dbg);
         nob_cc_flags(cmd_dbg);
-        nob_cmd_append(cmd_dbg, "-O0",  "-g", "-std=c11", "-DDEBUG_MODE", "-DALLOC_STD_IMPL");
+        nob_cmd_append(cmd_dbg, "-O0",  "-g", "-Wno-unused-function", "-std=c11", "-DDEBUG_MODE", "-DALLOC_STD_IMPL", "-finstrument-functions", "-fsanitize=address");
         nob_cc_output(cmd_dbg, output_file_dbg);
         nob_cc_inputs(cmd_dbg, input_file);
         
@@ -327,7 +334,9 @@ static int build_from_src(void) {
     return 0;
 }
 
-static int gen_compile_commands(compile_commands_t *commands) {
+static int gen_compile_commands(void *cmds) {
+
+    compile_commands_t *commands = cmds;
 
     FILE *output = fopen("compile_commands.json", "w");
     if (!output) {

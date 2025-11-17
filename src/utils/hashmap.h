@@ -290,7 +290,9 @@ static void hm_destroy(hashmap_t *hm) {
 
 static void *hm_insert(hashmap_t *hm, void *key, void *value, error_t *err) {
 
-    err->is_error = false;
+    if (err != NULL)
+        err->is_error = false;
+
     void *result = NULL;
 
     const float load_factor = (float) hm->count / (float) hm->usable_capacity; 
@@ -299,8 +301,10 @@ static void *hm_insert(hashmap_t *hm, void *key, void *value, error_t *err) {
     if (unlikely(load_factor > 0.9)) {
         /* Fail immediately if cannot grow at 90% capacity*/
         if (!hm_grow(hm)) {
-            err->is_error = true;
-            sprintf(err->error_msg, "Hashmap was full and failed to increase capacity");
+            if (err != NULL) {
+                err->is_error = true;
+                sprintf(err->error_msg, "Hashmap was full and failed to increase capacity");
+            }
             return result;
         };
     }
