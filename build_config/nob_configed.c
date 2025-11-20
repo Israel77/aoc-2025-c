@@ -61,7 +61,10 @@ int main(void)
     if (BUILD_UTILS_TESTS) {
         include_utils_tests();
     }
-    include_solutions();
+
+    if (BUILD_SOLUTIONS) {
+        include_solutions();
+    }
 
     result = build_from_src();
     if (result > 0) return result;

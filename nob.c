@@ -32,13 +32,14 @@ int main(int argc, char **argv)
         sb_append_cstr(&sb, "\n/* ----- Compilation options ----- */\n");
         sb_append_cstr(&sb, "/* Compile the solution for these days (0 will compile all) */\n");
         sb_append_cstr(&sb, "static const unsigned int COMPILE_SOLUTIONS[] = {0};\n");
+        sb_append_cstr(&sb, "#define BUILD_SOLUTIONS   1    /* Compile the solutions for each day */\n");
         sb_append_cstr(&sb, "#define BUILD_UTILS_TESTS 0    /* Compile the tests for the utilities */\n");
         sb_append_cstr(&sb, "#define BUILD_ASYNC 1          /* Compile programs concurrently */\n");
 
         /* ----- Run options ----- */
         sb_append_cstr(&sb, "\n/* ----- Run options ----- */\n");
-        sb_append_cstr(&sb, "#define RUN_PROGS 1            /* Run all the programs that were compiled */\n");
-        sb_append_cstr(&sb, "#define ENABLE_PERF 1          /* Enable perf when running the programs (requires RUN_PROGS) */\n");
+        sb_append_cstr(&sb, "#define RUN_PROGS 0            /* Run all the programs that were compiled */\n");
+        sb_append_cstr(&sb, "#define ENABLE_PERF 0          /* Enable perf when running the programs (requires RUN_PROGS) */\n");
         sb_append_cstr(&sb, "/* Which events to monitor (if perf is enabled) */\n");
         sb_append_cstr(&sb, "#define PERF_EVENTS \"cycles,instructions,cache-references,cache-misses,branches,branch-misses\"\n");
 
