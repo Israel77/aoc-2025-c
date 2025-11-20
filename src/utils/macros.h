@@ -20,7 +20,7 @@
 #define TEST_FAIL(msg)  do { printf("\033[31m [ FAIL] %s \033[0m\n", msg); ++tests_failed; } while (0)
 #define TEST_ASSERT(condition, msg) do {     \
         if ((condition)) TEST_OK(msg);       \
-        else TEST_FAIL(msg);                 \
+        else TEST_FAIL(msg);                \
     } while (0)
 
 /* Align x up to a multiple of n where n is a power of 2 */

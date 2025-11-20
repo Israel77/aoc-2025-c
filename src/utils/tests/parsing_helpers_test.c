@@ -47,7 +47,7 @@ static void test_parse_u64(void) {
 
         string_t actual_rest;
 
-        uint64_t actual_parsed = parse_u64(&input, &actual_rest);
+        uint64_t actual_parsed = parse_u64(input, &actual_rest);
 
 
         TEST_ASSERT(actual_parsed == parsed[i], "u64 parsed from string successfully");
@@ -72,7 +72,7 @@ static void test_parse_u32(void) {
 
         string_t actual_rest;
 
-        uint32_t actual_parsed = parse_u32(&input, &actual_rest);
+        uint32_t actual_parsed = parse_u32(input, &actual_rest);
 
 
         TEST_ASSERT(actual_parsed == parsed[i], "u32 parsed from string successfully");
@@ -96,7 +96,7 @@ static void test_parse_u16(void) {
 
         string_t actual_rest;
 
-        uint16_t actual_parsed = parse_u16(&input, &actual_rest);
+        uint16_t actual_parsed = parse_u16(input, &actual_rest);
 
 
         TEST_ASSERT(actual_parsed == parsed[i], "u16 parsed from string successfully");
@@ -120,7 +120,7 @@ static void test_parse_u8(void) {
 
         string_t actual_rest;
 
-        uint8_t actual_parsed = parse_u8(&input, &actual_rest);
+        uint8_t actual_parsed = parse_u8(input, &actual_rest);
 
 
         TEST_ASSERT(actual_parsed == parsed[i], "u8 parsed from string successfully");
@@ -144,7 +144,7 @@ static void test_parse_i64(void) {
 
         string_t actual_rest;
 
-        int64_t actual_parsed = parse_i64(&input, &actual_rest);
+        int64_t actual_parsed = parse_i64(input, &actual_rest);
 
 
         TEST_ASSERT(actual_parsed == parsed[i], "i64 parsed from string successfully");
@@ -169,7 +169,7 @@ static void test_parse_i32(void) {
 
         string_t actual_rest;
 
-        int32_t actual_parsed = parse_i32(&input, &actual_rest);
+        int32_t actual_parsed = parse_i32(input, &actual_rest);
 
 
         TEST_ASSERT(actual_parsed == parsed[i], "i32 parsed from string successfully");
@@ -192,7 +192,7 @@ static void test_skip_whitespace(void) {
 
         string_t actual_rest;
 
-        skip_whitespace(&input, &actual_rest);
+        skip_whitespace(input, &actual_rest);
 
         TEST_ASSERT(string_equals(&actual_rest, &expected_rest), "whitespace skipped");
     }
@@ -214,7 +214,7 @@ static void test_skip_n_chars(void) {
 
         string_t actual_rest;
 
-        skip_n_chars(&input, &actual_rest, count);
+        skip_n_chars(input, &actual_rest, count);
 
         TEST_ASSERT(string_equals(&actual_rest, &expected_rest), "skip specified amount of chars");
     }
@@ -234,7 +234,7 @@ static void test_skip_while_1(void) {
 
         string_t actual_rest;
 
-        skip_while(&input, &actual_rest, starts_with_letter);
+        skip_while(input, &actual_rest, starts_with_letter);
 
         TEST_ASSERT(string_equals(&actual_rest, &expected_rest), "skip while predicate is true");
     }
@@ -255,7 +255,7 @@ static void test_skip_while_2(void) {
 
         string_t actual_rest;
 
-        skip_while(&input, &actual_rest, starts_with_digit);
+        skip_while(input, &actual_rest, starts_with_digit);
 
         TEST_ASSERT(string_equals(&actual_rest, &expected_rest), "skip while predicate is true");
     }
@@ -275,7 +275,7 @@ static void test_skip_while_3(void) {
         string_t actual_rest;
 
         /* Skip everything */
-        skip_while(&input, &actual_rest, always_true);
+        skip_while(input, &actual_rest, always_true);
 
         TEST_ASSERT(string_equals(&actual_rest, &expected_rest), "skip while predicate is true");
     }
@@ -295,7 +295,7 @@ static void test_skip_while_4(void) {
         string_t actual_rest;
 
         /* Skip nothing */
-        skip_while(&input, &actual_rest, always_false);
+        skip_while(input, &actual_rest, always_false);
 
         TEST_ASSERT(string_equals(&actual_rest, &expected_rest), "skip while predicate is true");
     }

@@ -19,7 +19,6 @@ typedef struct {
     size_t capacity;
     size_t min_capacity;
     const allocator_t *allocator;
-    void *alloc_ctx;
 } array_info_t;
 
 static void *da_reserve(void *array, array_info_t *info, size_t expected_capacity) {
@@ -41,7 +40,7 @@ static void *da_reserve(void *array, array_info_t *info, size_t expected_capacit
             info->capacity *= 2;
         }
 
-        result = info->allocator->realloc(info->alloc_ctx, array, old_size, info->capacity * info->item_size);
+        result = info->allocator->interface->realloc(info->allocator->alloc_ctx, array, old_size, info->capacity * info->item_size);
         assert(result != NULL && "Error on memory allocation.");
     }
 
@@ -149,7 +148,7 @@ static inline bool da_equals(const void *array1, const array_info_t *info1,
 }
 
 static inline void da_free(void *array, array_info_t *info) {
-    info->allocator->free(info->alloc_ctx, array, info->capacity * info->item_size);
+    info->allocator->interface->free(info->allocator->alloc_ctx, array, info->capacity * info->item_size);
 }
 
 #endif /* ifndef DA_H */

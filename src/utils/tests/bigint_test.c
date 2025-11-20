@@ -43,14 +43,14 @@ static void test_encoding_decoding() {
         const char *value = values[i];
         string_t sized_value = string_from_cstr(value);
 
-        bigint_t num = bigint_from_cstr(value, &global_std_allocator, NULL, &err);
+        bigint_t num = bigint_from_cstr(value, &global_std_allocator, &err);
 
         if (err.is_error) {
             TEST_FAIL("");
             fprintf(stderr, "Error while parsing%s",err.error_msg);
         }
         
-        string_builder_t sb = bigint_to_sb(&num, &global_std_allocator, NULL, &global_std_allocator, NULL);
+        string_builder_t sb = bigint_to_sb(&num, &global_std_allocator, &global_std_allocator);
 
         string_t str = sb_build(&sb);
 
@@ -76,16 +76,16 @@ static void test_encoding_decoding() {
 static void test_addition() {
 
     error_t err;
-    bigint_t result = bigint_from_cstr("0", &global_std_allocator, NULL, &err);
+    bigint_t result = bigint_from_cstr("0", &global_std_allocator, &err);
     bigint_t expected_result;
 
-    bigint_t small_positive = bigint_from_cstr("256", &global_std_allocator, NULL, &err);
-    bigint_t small_negative = bigint_from_cstr("-255", &global_std_allocator, NULL, &err);
-    bigint_t big_positive = bigint_from_cstr("100000000000", &global_std_allocator, NULL, &err);
-    bigint_t big_negative = bigint_from_cstr("-10000000000", &global_std_allocator, NULL, &err);
+    bigint_t small_positive = bigint_from_cstr("256", &global_std_allocator, &err);
+    bigint_t small_negative = bigint_from_cstr("-255", &global_std_allocator, &err);
+    bigint_t big_positive = bigint_from_cstr("100000000000", &global_std_allocator, &err);
+    bigint_t big_negative = bigint_from_cstr("-10000000000", &global_std_allocator, &err);
     
 
-    expected_result = bigint_from_cstr("256", &global_std_allocator, NULL, &err);
+    expected_result = bigint_from_cstr("256", &global_std_allocator, &err);
     bigint_add_in(&result, &small_positive);
     if (bigint_equals(&expected_result, &result)) {
         TEST_OK("Add positive integers");
@@ -98,7 +98,7 @@ static void test_addition() {
     da_free(expected_result.items, &expected_result.array_info);
 
     /* Test adding a small negative integer */
-    expected_result = bigint_from_cstr("1", &global_std_allocator, NULL, &err); /* 256 + (-255) = 1 */
+    expected_result = bigint_from_cstr("1", &global_std_allocator, &err); /* 256 + (-255) = 1 */
     bigint_add_in(&result, &small_negative);
     if (bigint_equals(&expected_result, &result)) {
         TEST_OK("Add positive and negative integers");
@@ -113,7 +113,7 @@ static void test_addition() {
     da_free(expected_result.items, &expected_result.array_info);
 
     /* Test adding a big positive integer */
-    expected_result = bigint_from_cstr("100000000000", &global_std_allocator, NULL, &err); /* 0 + 100000000000 = 100000000000 */
+    expected_result = bigint_from_cstr("100000000000", &global_std_allocator, &err); /* 0 + 100000000000 = 100000000000 */
     bigint_add_in(&result, &big_positive);
     if (bigint_equals(&expected_result, &result)) {
         TEST_OK("Add big positive integer");
@@ -128,7 +128,7 @@ static void test_addition() {
     da_free(expected_result.items, &expected_result.array_info);
 
     /* Test adding a big negative integer */
-    expected_result = bigint_from_cstr("-10000000000", &global_std_allocator, NULL, &err); /* 0 + (-10000000000) = -10000000000 */
+    expected_result = bigint_from_cstr("-10000000000", &global_std_allocator, &err); /* 0 + (-10000000000) = -10000000000 */
     bigint_add_in(&result, &big_negative);
     if (bigint_equals(&expected_result, &result)) {
         TEST_OK("Add big negative integer");
@@ -148,8 +148,11 @@ static void test_addition() {
 static void test_subtraction() {
 
     error_t err;
-    const allocator_t *allocator = &arena_allocator;
     arena_context_t test_ctx = arena_init(4096, ARENA_FAST_ALLOC | ARENA_VIRTUAL_BACKEND | ARENA_GROWABLE, NULL, NULL);
+    const allocator_t allocator = {
+        .interface = &arena_interface,
+        .alloc_ctx = &test_ctx
+    };
 
     bigint_t num1, num2, result, expected_result;
 
@@ -171,10 +174,10 @@ static void test_subtraction() {
 
     for (size_t i = 0; i < sizeof (calculations) / sizeof (char*); i += 3) {
         
-        num1 = bigint_from_cstr(calculations[i], allocator, &test_ctx, &err);
-        num2 = bigint_from_cstr(calculations[i+1], allocator, &test_ctx, &err);
-        expected_result = bigint_from_cstr(calculations[i+2], allocator, &test_ctx, &err);
-        result = bigint_with_capacity(num1.array_info.count, allocator, &test_ctx);
+        num1 = bigint_from_cstr(calculations[i], &allocator, &err);
+        num2 = bigint_from_cstr(calculations[i+1], &allocator, &err);
+        expected_result = bigint_from_cstr(calculations[i+2], &allocator, &err);
+        result = bigint_with_capacity(num1.array_info.count, &allocator);
 
         bigint_copy(&result, &num1);
         bigint_sub_in(&result, &num2);
@@ -186,10 +189,10 @@ static void test_subtraction() {
             string_builder_t num1_sb, num2_sb, result_sb, exp_result_sb;
             string_t num1_str, num2_str, result_str, exp_result_str;
 
-            num1_sb = bigint_to_sb(&num1, allocator, &test_ctx, allocator, &test_ctx);
-            num2_sb = bigint_to_sb(&num2, allocator, &test_ctx, allocator, &test_ctx);
-            result_sb = bigint_to_sb(&result, allocator, &test_ctx, allocator, &test_ctx);
-            exp_result_sb = bigint_to_sb(&expected_result, allocator, &test_ctx, allocator, &test_ctx);
+            num1_sb = bigint_to_sb(&num1, &allocator, &allocator);
+            num2_sb = bigint_to_sb(&num2, &allocator, &allocator);
+            result_sb = bigint_to_sb(&result, &allocator, &allocator);
+            exp_result_sb = bigint_to_sb(&expected_result, &allocator, &allocator);
 
             num1_str = sb_build(&num1_sb);
             num2_str = sb_build(&num2_sb);
@@ -207,7 +210,7 @@ static void test_subtraction() {
     }
 
     /* Clean up */
-    allocator->free_all(&test_ctx);
+    allocator_free_all(&allocator);
 }
 
 
@@ -215,10 +218,14 @@ static void test_multiplication() {
 
     error_t err = {0};
     arena_context_t test_ctx = arena_init(4096, ARENA_FAST_ALLOC | ARENA_VIRTUAL_BACKEND | ARENA_GROWABLE, NULL, NULL);
+    const allocator_t allocator = {
+        .interface = &arena_interface,
+        .alloc_ctx = &test_ctx
+    };
 
-    bigint_t num1 = bigint_from_cstr("4294967296", &arena_allocator, &test_ctx, &err);
-    bigint_t num2 = bigint_from_cstr("2", &arena_allocator, &test_ctx, &err);
-    bigint_t expected_result = bigint_from_cstr("8589934592", &arena_allocator, &test_ctx, &err);
+    bigint_t num1 = bigint_from_cstr("4294967296", &allocator, &err);
+    bigint_t num2 = bigint_from_cstr("2", &allocator, &err);
+    bigint_t expected_result = bigint_from_cstr("8589934592", &allocator, &err);
 
     bigint_mul_in(&num1, &num2);
 
@@ -230,9 +237,9 @@ static void test_multiplication() {
 
     arena_reset(&test_ctx);
 
-    num1 = bigint_from_cstr("10", &arena_allocator, &test_ctx, &err);
-    num2 = bigint_from_cstr("100000000000", &arena_allocator, &test_ctx, &err);
-    expected_result = bigint_from_cstr("1000000000000", &arena_allocator, &test_ctx, &err);
+    num1 = bigint_from_cstr("10", &allocator, &err);
+    num2 = bigint_from_cstr("100000000000", &allocator, &err);
+    expected_result = bigint_from_cstr("1000000000000", &allocator, &err);
 
     bigint_mul_in(&num1, &num2);
 
@@ -244,9 +251,9 @@ static void test_multiplication() {
 
     arena_reset(&test_ctx);
 
-    num1 = bigint_from_cstr("-10", &arena_allocator, &test_ctx, &err);
-    num2 = bigint_from_cstr("-100000000000", &arena_allocator, &test_ctx, &err);
-    expected_result = bigint_from_cstr("1000000000000", &arena_allocator, &test_ctx, &err);
+    num1 = bigint_from_cstr("-10", &allocator, &err);
+    num2 = bigint_from_cstr("-100000000000", &allocator, &err);
+    expected_result = bigint_from_cstr("1000000000000", &allocator, &err);
 
     bigint_mul_in(&num1, &num2);
 
@@ -258,9 +265,9 @@ static void test_multiplication() {
 
     arena_reset(&test_ctx);
 
-    num1 = bigint_from_cstr("-10", &arena_allocator, &test_ctx, &err);
-    num2 = bigint_from_cstr("100000000000", &arena_allocator, &test_ctx, &err);
-    expected_result = bigint_from_cstr("-1000000000000", &arena_allocator, &test_ctx, &err);
+    num1 = bigint_from_cstr("-10", &allocator, &err);
+    num2 = bigint_from_cstr("100000000000", &allocator, &err);
+    expected_result = bigint_from_cstr("-1000000000000", &allocator, &err);
 
     bigint_mul_in(&num1, &num2);
 
@@ -278,8 +285,11 @@ static void test_multiplication() {
 static void test_division() {
 
     error_t err = {0};
-    const allocator_t *allocator = &arena_allocator;
     arena_context_t test_ctx = arena_init(4096, ARENA_FAST_ALLOC | ARENA_VIRTUAL_BACKEND | ARENA_GROWABLE, NULL, NULL);
+    const allocator_t allocator = {
+        .interface = &arena_interface,
+        .alloc_ctx = &test_ctx
+    };
 
     bigint_t num1, num2;
     divmod_t expected, actual;
@@ -331,12 +341,12 @@ static void test_division() {
 
     for (size_t i = 0; i < sizeof (positive_by_positive) / sizeof (char*); i += 4) {
         
-        num1 = bigint_from_cstr(positive_by_positive[i], allocator, &test_ctx, &err);
-        num2 = bigint_from_cstr(positive_by_positive[i+1], allocator, &test_ctx, &err);
-        expected.quotient = bigint_from_cstr(positive_by_positive[i+2], allocator, &test_ctx, &err);
-        expected.remainder = bigint_from_cstr(positive_by_positive[i+3], allocator, &test_ctx, &err);
+        num1 = bigint_from_cstr(positive_by_positive[i], &allocator, &err);
+        num2 = bigint_from_cstr(positive_by_positive[i+1], &allocator, &err);
+        expected.quotient = bigint_from_cstr(positive_by_positive[i+2], &allocator, &err);
+        expected.remainder = bigint_from_cstr(positive_by_positive[i+3], &allocator, &err);
 
-        actual = bigint_divmod(&num1, &num2, allocator, &test_ctx, &err);
+        actual = bigint_divmod(&num1, &num2, &allocator, &err);
 
         if (bigint_equals(&expected.quotient, &actual.quotient) && bigint_equals(&expected.remainder, &actual.remainder)) {
             TEST_OK("Divide positive numbers");
@@ -345,12 +355,12 @@ static void test_division() {
             string_builder_t num1_sb, num2_sb, exp_q_sb, exp_r_sb, act_q_sb, act_r_sb;
             string_t num1_str, num2_str, exp_q_str, exp_r_str, act_q_str, act_r_str;
 
-            num1_sb = bigint_to_sb(&num1, allocator, &test_ctx, allocator, &test_ctx);
-            num2_sb = bigint_to_sb(&num2, allocator, &test_ctx, allocator, &test_ctx);
-            exp_q_sb = bigint_to_sb(&expected.quotient, allocator, &test_ctx, allocator, &test_ctx);
-            exp_r_sb = bigint_to_sb(&expected.remainder, allocator, &test_ctx, allocator, &test_ctx);
-            act_q_sb = bigint_to_sb(&actual.quotient, allocator, &test_ctx, allocator, &test_ctx);
-            act_r_sb = bigint_to_sb(&actual.remainder, allocator, &test_ctx, allocator, &test_ctx);
+            num1_sb = bigint_to_sb(&num1, &allocator, &allocator);
+            num2_sb = bigint_to_sb(&num2, &allocator, &allocator);
+            exp_q_sb = bigint_to_sb(&expected.quotient, &allocator, &allocator);
+            exp_r_sb = bigint_to_sb(&expected.remainder, &allocator, &allocator);
+            act_q_sb = bigint_to_sb(&actual.quotient, &allocator, &allocator);
+            act_r_sb = bigint_to_sb(&actual.remainder, &allocator, &allocator);
 
             num1_str = sb_build(&num1_sb);
             num2_str = sb_build(&num2_sb);
@@ -375,12 +385,12 @@ static void test_division() {
 
     for (size_t i = 0; i < sizeof (negative_by_negative) / sizeof (char*); i += 4) {
         
-        num1 = bigint_from_cstr(negative_by_negative[i], allocator, &test_ctx, &err);
-        num2 = bigint_from_cstr(negative_by_negative[i+1], allocator, &test_ctx, &err);
-        expected.quotient = bigint_from_cstr(negative_by_negative[i+2], allocator, &test_ctx, &err);
-        expected.remainder = bigint_from_cstr(negative_by_negative[i+3], allocator, &test_ctx, &err);
+        num1 = bigint_from_cstr(negative_by_negative[i], &allocator, &err);
+        num2 = bigint_from_cstr(negative_by_negative[i+1], &allocator, &err);
+        expected.quotient = bigint_from_cstr(negative_by_negative[i+2], &allocator, &err);
+        expected.remainder = bigint_from_cstr(negative_by_negative[i+3], &allocator, &err);
 
-        actual = bigint_divmod(&num1, &num2, allocator, &test_ctx, &err);
+        actual = bigint_divmod(&num1, &num2, &allocator, &err);
 
         if (bigint_equals(&expected.quotient, &actual.quotient) && bigint_equals(&expected.remainder, &actual.remainder)) {
             TEST_OK("Divide negative numbers");
@@ -389,12 +399,12 @@ static void test_division() {
             string_builder_t num1_sb, num2_sb, exp_q_sb, exp_r_sb, act_q_sb, act_r_sb;
             string_t num1_str, num2_str, exp_q_str, exp_r_str, act_q_str, act_r_str;
 
-            num1_sb = bigint_to_sb(&num1, allocator, &test_ctx, allocator, &test_ctx);
-            num2_sb = bigint_to_sb(&num2, allocator, &test_ctx, allocator, &test_ctx);
-            exp_q_sb = bigint_to_sb(&expected.quotient, allocator, &test_ctx, allocator, &test_ctx);
-            exp_r_sb = bigint_to_sb(&expected.remainder, allocator, &test_ctx, allocator, &test_ctx);
-            act_q_sb = bigint_to_sb(&actual.quotient, allocator, &test_ctx, allocator, &test_ctx);
-            act_r_sb = bigint_to_sb(&actual.remainder, allocator, &test_ctx, allocator, &test_ctx);
+            num1_sb = bigint_to_sb(&num1, &allocator, &allocator);
+            num2_sb = bigint_to_sb(&num2, &allocator, &allocator);
+            exp_q_sb = bigint_to_sb(&expected.quotient, &allocator, &allocator);
+            exp_r_sb = bigint_to_sb(&expected.remainder, &allocator, &allocator);
+            act_q_sb = bigint_to_sb(&actual.quotient, &allocator, &allocator);
+            act_r_sb = bigint_to_sb(&actual.remainder, &allocator, &allocator);
 
             num1_str = sb_build(&num1_sb);
             num2_str = sb_build(&num2_sb);
@@ -419,12 +429,12 @@ static void test_division() {
 
     for (size_t i = 0; i < sizeof (negative_by_positive) / sizeof (char*); i += 4) {
         
-        num1 = bigint_from_cstr(negative_by_positive[i], allocator, &test_ctx, &err);
-        num2 = bigint_from_cstr(negative_by_positive[i+1], allocator, &test_ctx, &err);
-        expected.quotient = bigint_from_cstr(negative_by_positive[i+2], allocator, &test_ctx, &err);
-        expected.remainder = bigint_from_cstr(negative_by_positive[i+3], allocator, &test_ctx, &err);
+        num1 = bigint_from_cstr(negative_by_positive[i], &allocator, &err);
+        num2 = bigint_from_cstr(negative_by_positive[i+1], &allocator, &err);
+        expected.quotient = bigint_from_cstr(negative_by_positive[i+2], &allocator, &err);
+        expected.remainder = bigint_from_cstr(negative_by_positive[i+3], &allocator, &err);
 
-        actual = bigint_divmod(&num1, &num2, allocator, &test_ctx, &err);
+        actual = bigint_divmod(&num1, &num2, &allocator, &err);
 
         if (bigint_equals(&expected.quotient, &actual.quotient) && bigint_equals(&expected.remainder, &actual.remainder)) {
             TEST_OK("Divide negative by positive");
@@ -433,12 +443,12 @@ static void test_division() {
             string_builder_t num1_sb, num2_sb, exp_q_sb, exp_r_sb, act_q_sb, act_r_sb;
             string_t num1_str, num2_str, exp_q_str, exp_r_str, act_q_str, act_r_str;
 
-            num1_sb = bigint_to_sb(&num1, allocator, &test_ctx, allocator, &test_ctx);
-            num2_sb = bigint_to_sb(&num2, allocator, &test_ctx, allocator, &test_ctx);
-            exp_q_sb = bigint_to_sb(&expected.quotient, allocator, &test_ctx, allocator, &test_ctx);
-            exp_r_sb = bigint_to_sb(&expected.remainder, allocator, &test_ctx, allocator, &test_ctx);
-            act_q_sb = bigint_to_sb(&actual.quotient, allocator, &test_ctx, allocator, &test_ctx);
-            act_r_sb = bigint_to_sb(&actual.remainder, allocator, &test_ctx, allocator, &test_ctx);
+            num1_sb = bigint_to_sb(&num1, &allocator, &allocator);
+            num2_sb = bigint_to_sb(&num2, &allocator, &allocator);
+            exp_q_sb = bigint_to_sb(&expected.quotient, &allocator, &allocator);
+            exp_r_sb = bigint_to_sb(&expected.remainder, &allocator, &allocator);
+            act_q_sb = bigint_to_sb(&actual.quotient, &allocator, &allocator);
+            act_r_sb = bigint_to_sb(&actual.remainder, &allocator, &allocator);
 
             num1_str = sb_build(&num1_sb);
             num2_str = sb_build(&num2_sb);
@@ -462,12 +472,12 @@ static void test_division() {
 
     for (size_t i = 0; i < sizeof (positive_by_negative) / sizeof (char*); i += 4) {
         
-        num1 = bigint_from_cstr(positive_by_negative[i], allocator, &test_ctx, &err);
-        num2 = bigint_from_cstr(positive_by_negative[i+1], allocator, &test_ctx, &err);
-        expected.quotient = bigint_from_cstr(positive_by_negative[i+2], allocator, &test_ctx, &err);
-        expected.remainder = bigint_from_cstr(positive_by_negative[i+3], allocator, &test_ctx, &err);
+        num1 = bigint_from_cstr(positive_by_negative[i], &allocator, &err);
+        num2 = bigint_from_cstr(positive_by_negative[i+1], &allocator, &err);
+        expected.quotient = bigint_from_cstr(positive_by_negative[i+2], &allocator, &err);
+        expected.remainder = bigint_from_cstr(positive_by_negative[i+3], &allocator, &err);
 
-        actual = bigint_divmod(&num1, &num2, allocator, &test_ctx, &err);
+        actual = bigint_divmod(&num1, &num2, &allocator, &err);
 
         if (bigint_equals(&expected.quotient, &actual.quotient) && bigint_equals(&expected.remainder, &actual.remainder)) {
             TEST_OK("Divide positive by negative");
@@ -476,12 +486,12 @@ static void test_division() {
             string_builder_t num1_sb, num2_sb, exp_q_sb, exp_r_sb, act_q_sb, act_r_sb;
             string_t num1_str, num2_str, exp_q_str, exp_r_str, act_q_str, act_r_str;
 
-            num1_sb = bigint_to_sb(&num1, allocator, &test_ctx, allocator, &test_ctx);
-            num2_sb = bigint_to_sb(&num2, allocator, &test_ctx, allocator, &test_ctx);
-            exp_q_sb = bigint_to_sb(&expected.quotient, allocator, &test_ctx, allocator, &test_ctx);
-            exp_r_sb = bigint_to_sb(&expected.remainder, allocator, &test_ctx, allocator, &test_ctx);
-            act_q_sb = bigint_to_sb(&actual.quotient, allocator, &test_ctx, allocator, &test_ctx);
-            act_r_sb = bigint_to_sb(&actual.remainder, allocator, &test_ctx, allocator, &test_ctx);
+            num1_sb = bigint_to_sb(&num1, &allocator, &allocator);
+            num2_sb = bigint_to_sb(&num2, &allocator, &allocator);
+            exp_q_sb = bigint_to_sb(&expected.quotient, &allocator, &allocator);
+            exp_r_sb = bigint_to_sb(&expected.remainder, &allocator, &allocator);
+            act_q_sb = bigint_to_sb(&actual.quotient, &allocator, &allocator);
+            act_r_sb = bigint_to_sb(&actual.remainder, &allocator, &allocator);
 
             num1_str = sb_build(&num1_sb);
             num2_str = sb_build(&num2_sb);

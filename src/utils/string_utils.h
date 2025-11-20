@@ -29,11 +29,11 @@ typedef struct {
 
 
 /* Creates a new string builder from a C string */
-string_builder_t sb_from_cstr(const char *cstr, const allocator_t *allocator, void *alloc_ctx);
+string_builder_t sb_from_cstr(const char *cstr, const allocator_t *allocator);
 /* Creates a new string builder with a given capacity */
-string_builder_t sb_with_capacity(const size_t capacity, const allocator_t *allocator, void *alloc_ctx);
+string_builder_t sb_with_capacity(const size_t capacity, const allocator_t *allocator);
 /* Creates a new string builder from a file */
-string_builder_t sb_read_file(FILE *file, const allocator_t *allocator, void *alloc_ctx);
+string_builder_t sb_read_file(FILE *file, const allocator_t *allocator);
 
 /* Append a character */
 void sb_append_char(string_builder_t *sb, const char ch);
@@ -47,7 +47,7 @@ void sb_append_sb(string_builder_t *sb, const string_builder_t *other);
 string_t sb_build(string_builder_t *sb);
 
 /* Joins the array of strings to a string builder, separated by a delimiter (optional) */
-string_builder_t string_array_join_by_char(string_array_t array, char delimiter, const allocator_t *allocator, void *alloc_ctx);
+string_builder_t string_array_join_by_char(string_array_t array, char delimiter, const allocator_iface *allocator, void *alloc_ctx);
 
 /* Builds a string directly from a cstr (chars will point to the same memory address as the cstr). */
 string_t string_from_cstr(const char *cstr);
@@ -55,8 +55,8 @@ string_t string_from_cstr(const char *cstr);
 bool string_equals(const string_t *str, const string_t *other);
 
 /* Split a string by a given delimiter */
-string_array_t string_split_by_char(const string_t *str, const char delimiter, const allocator_t *allocator, void *alloc_ctx);
-string_array_t string_split_by_str(const string_t *str, const string_t *delimiter, const allocator_t *allocator, void *alloc_ctx);
+string_array_t string_split_by_char(const string_t *str, const char delimiter, const allocator_t *allocator);
+string_array_t string_split_by_str(const string_t *str, const string_t *delimiter, const allocator_t *allocator);
 
 void string_print(const string_t *str);
 void string_println(const string_t *str);
@@ -64,17 +64,18 @@ void string_sprint(char *buffer, const string_t *str);
 void string_sprintln(char *buffer, const string_t *str);
 
 /* Convert integer types to strings */
-string_builder_t sb_from_u64(const uint64_t value, const allocator_t *allocator, void *alloc_ctx);
+string_builder_t sb_from_u64(const uint64_t value, const allocator_t *allocator);
 
 
 
+#define STRING_UTILS_IMPL
 #ifdef STRING_UTILS_IMPL
 
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 
-string_builder_t sb_from_cstr(const char *cstr, const allocator_t *allocator, void *alloc_ctx) {
+string_builder_t sb_from_cstr(const char *cstr, const allocator_t *allocator) {
     
 
     size_t count = strlen(cstr);
@@ -84,19 +85,20 @@ string_builder_t sb_from_cstr(const char *cstr, const allocator_t *allocator, vo
             .count = count,
             .capacity = count + 1,
             .allocator = allocator,
-            .alloc_ctx = alloc_ctx
         }
     };
 
 
-    sb.items = (char *) allocator->alloc(alloc_ctx, sb.array_info.capacity * sizeof(char));
+    sb.items = (char *) allocator->interface->alloc(
+            allocator->alloc_ctx,
+            sb.array_info.capacity * sizeof(char));
 
     memcpy(sb.items, cstr, count);
     sb.items[count] = '\0';
 
     return sb;
 }
-string_builder_t sb_with_capacity(const size_t capacity, const allocator_t *allocator, void *alloc_ctx) {
+string_builder_t sb_with_capacity(const size_t capacity, const allocator_t *allocator) {
     
     string_builder_t sb = {
         .array_info = {
@@ -104,7 +106,6 @@ string_builder_t sb_with_capacity(const size_t capacity, const allocator_t *allo
             .count = 0,
             .min_capacity = capacity,
             .allocator = allocator,
-            .alloc_ctx = alloc_ctx
         }
     };
 
@@ -118,12 +119,11 @@ string_builder_t sb_with_capacity(const size_t capacity, const allocator_t *allo
 }
 
 /* Creates a new string builder from a file */
-string_builder_t sb_read_file(FILE *file, const allocator_t *allocator, void *alloc_ctx) {
+string_builder_t sb_read_file(FILE *file, const allocator_t *allocator) {
     string_builder_t sb = {
         .array_info = {
             .item_size = sizeof (char),
             .allocator = allocator,
-            .alloc_ctx = alloc_ctx
         }
     };
 
@@ -131,7 +131,6 @@ string_builder_t sb_read_file(FILE *file, const allocator_t *allocator, void *al
         .array_info = {
             .item_size = sizeof (char),
             .allocator = allocator,
-            .alloc_ctx = alloc_ctx
         }
     };
     temp_sb.items = da_reserve(temp_sb.items, &temp_sb.array_info, 1024);
@@ -140,7 +139,7 @@ string_builder_t sb_read_file(FILE *file, const allocator_t *allocator, void *al
         temp_sb.array_info.count = strlen(temp_sb.items);
         sb_append_sb(&sb, &temp_sb);
     }
-    allocator->free(temp_sb.items, alloc_ctx, temp_sb.array_info.capacity * sizeof (*sb.items));
+    allocator->interface->free(temp_sb.items, allocator->alloc_ctx, temp_sb.array_info.capacity * sizeof (*sb.items));
 
     return sb;
 }
@@ -224,12 +223,11 @@ bool string_equals(const string_t *str, const string_t *other) {
     return true;
 }
 
-string_array_t string_split_by_char(const string_t *str, const char delimiter, const allocator_t *allocator, void *alloc_ctx) {
+string_array_t string_split_by_char(const string_t *str, const char delimiter, const allocator_t *allocator) {
     string_array_t result = {
         .array_info = {
             .item_size = sizeof (string_t),
             .allocator = allocator,
-            .alloc_ctx = alloc_ctx,
             .min_capacity = 8
         }
     };
@@ -261,11 +259,10 @@ string_array_t string_split_by_char(const string_t *str, const char delimiter, c
     return result;
 }
 
-string_array_t string_split_by_str(const string_t *str, const string_t *delimiter, const allocator_t *allocator, void *alloc_ctx) {
+string_array_t string_split_by_str(const string_t *str, const string_t *delimiter, const allocator_t *allocator) {
     string_array_t result = {
         .array_info = {
             .allocator = allocator,
-            .alloc_ctx = alloc_ctx
         }
     };
 
@@ -323,9 +320,9 @@ void string_sprintln(char *buffer, const string_t *str) {
     sprintf(buffer, "%.*s\n", (int)str->count, str->chars);
 }
 
-string_builder_t sb_from_u64(const uint64_t value, const allocator_t *allocator, void *alloc_ctx) {
+string_builder_t sb_from_u64(const uint64_t value, const allocator_t *allocator) {
 
-    string_builder_t result = sb_with_capacity(20, allocator, alloc_ctx);
+    string_builder_t result = sb_with_capacity(20, allocator);
 
     uint64_t current = value;
 

@@ -221,8 +221,7 @@ void include_solutions(void) {
     // if (nob_file_exists("solutions/template/template.c") == 0)
     //     nob_da_append(&build_paths,"solutions/template/template");
     //
-    if (COMPILE_SOLUTIONS[0] == -1) return;
-    
+
     if (COMPILE_SOLUTIONS[0] == 0) {
         for (int day = 1; day <= 25; ++day) {
             char file_with_extension[MAX_FILE_PATH];
@@ -315,7 +314,7 @@ static int build_from_src(void) {
         // Debug version
         nob_cc(cmd_dbg);
         nob_cc_flags(cmd_dbg);
-        nob_cmd_append(cmd_dbg, "-O0",  "-g", "-Wno-unused-function", "-std=c11", "-DDEBUG_MODE", "-DALLOC_STD_IMPL", "-finstrument-functions", "-fsanitize=address");
+        nob_cmd_append(cmd_dbg, "-O0",  "-g", "-Wno-unused-function", "-std=c11", "-DDEBUG_MODE", "-DALLOC_STD_IMPL", "-finstrument-functions");
         nob_cc_output(cmd_dbg, output_file_dbg);
         nob_cc_inputs(cmd_dbg, input_file);
         

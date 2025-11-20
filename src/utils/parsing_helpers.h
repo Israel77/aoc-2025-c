@@ -27,7 +27,7 @@ typedef bool (*string_predicate)(const string_t *);
  * Returns:
  * 64-bit unsigned integer based on the start of the string
  */
-static uint64_t parse_u64(const string_t *src, string_t *rest);
+static uint64_t parse_u64(const string_t src, string_t *rest);
 
 /* 
  * Parses the src string into an uint32_t integer and puts the non-parsed part in rest.
@@ -44,7 +44,7 @@ static uint64_t parse_u64(const string_t *src, string_t *rest);
  * Returns:
  * 32-bit unsigned integer based on the start of the string
  */
-static uint32_t parse_u32(const string_t *src, string_t *rest);
+static uint32_t parse_u32(const string_t src, string_t *rest);
 
 /* 
  * Parses the src string into an uint16_t integer and puts the non-parsed part in rest.
@@ -61,7 +61,7 @@ static uint32_t parse_u32(const string_t *src, string_t *rest);
  * Returns:
  * 16-bit unsigned integer based on the start of the string
  */
-static uint16_t parse_u16(const string_t *src, string_t *rest);
+static uint16_t parse_u16(const string_t src, string_t *rest);
 
 /* 
  * Parses the src string into an uint8_t integer and puts the non-parsed part in rest.
@@ -79,7 +79,7 @@ static uint16_t parse_u16(const string_t *src, string_t *rest);
  * Returns:
  * 8-bit unsigned integer based on the start of the string
  */
-static uint8_t parse_u8(const string_t *src, string_t *rest);
+static uint8_t parse_u8(const string_t src, string_t *rest);
 
 /* 
  * Parses the src string into an 64-bit signed integer and puts the non-parsed part in rest.
@@ -98,7 +98,7 @@ static uint8_t parse_u8(const string_t *src, string_t *rest);
  * Returns:
  * 64-bit integer based on the start of the string
  */
-static int64_t parse_i64(const string_t *src, string_t *rest);
+static int64_t parse_i64(const string_t src, string_t *rest);
 
 /* 
  * Parses the src string into an 32-bit signed integer and puts the non-parsed part in rest.
@@ -117,7 +117,7 @@ static int64_t parse_i64(const string_t *src, string_t *rest);
  * Returns:
  * 32-bit integer based on the start of the string
  */
-static int32_t parse_i32(const string_t *src, string_t *rest);
+static int32_t parse_i32(const string_t src, string_t *rest);
 
 /* 
  * Parses the src string into an 16-bit signed integer and puts the non-parsed part in rest.
@@ -136,7 +136,7 @@ static int32_t parse_i32(const string_t *src, string_t *rest);
  * Returns:
  * 16-bit integer based on the start of the string
  */
-static int16_t parse_i16(const string_t *src, string_t *rest);
+static int16_t parse_i16(const string_t src, string_t *rest);
 
 /* 
  * Parses the src string into an 8-bit signed integer and puts the non-parsed part in rest.
@@ -155,7 +155,7 @@ static int16_t parse_i16(const string_t *src, string_t *rest);
  * Returns:
  * 8-bit integer based on the start of the string
  */
-static int8_t parse_i8(const string_t *src, string_t *rest);
+static int8_t parse_i8(const string_t src, string_t *rest);
 
 /* 
  * Parses the src string into a single digit, which is expected to be a character between '0' and '9'.
@@ -169,7 +169,7 @@ static int8_t parse_i8(const string_t *src, string_t *rest);
  * Returns:
  * An 8-bit unsigned integer that represents the parsed digit.
  */
-static uint8_t parse_digit(const string_t *src, string_t *rest);
+static uint8_t parse_digit(const string_t src, string_t *rest);
 
 /* 
  * Skips the first character in the src string if it is also present in the skip string.
@@ -180,7 +180,7 @@ static uint8_t parse_digit(const string_t *src, string_t *rest);
  * skip       - Array containing the characters to be skipped.
  * skip_count - The number of characters in the skip array.
  */
-static void skip_any_of(const string_t *src, string_t *rest, const char *skip, const size_t skip_count);
+static void skip_any_of(const string_t src, string_t *rest, const char *skip, const size_t skip_count);
 
 /* 
  * Skips all characters in the beginning of src string that are also present in the skip string.
@@ -191,7 +191,7 @@ static void skip_any_of(const string_t *src, string_t *rest, const char *skip, c
  * skip       - Array containing the characters to be skipped.
  * skip_count - The number of characters in the skip array.
  */
-static void skip_any_of(const string_t *src, string_t *rest, const char *skip, const size_t skip_count);
+static void skip_any_of(const string_t src, string_t *rest, const char *skip, const size_t skip_count);
 
 /* 
  * Skips the first occurrence of a specified character in the src string.
@@ -202,7 +202,7 @@ static void skip_any_of(const string_t *src, string_t *rest, const char *skip, c
  * rest - The remaining part of the original string after the character has been skipped.
  * ch   - The character to be skipped.
  */
-static void skip_char(const string_t *src, string_t *rest, char ch);
+static void skip_char(const string_t src, string_t *rest, char ch);
 /* 
  * Skips the first n chars in the src string, regardless of what the are.
  * If count is equal to 0, rest will be equal to src.
@@ -212,7 +212,7 @@ static void skip_char(const string_t *src, string_t *rest, char ch);
  * rest  - The remaining part of the original string after the characters have been skipped.
  * count - Number of chars to be skipped.
  */
-static void skip_n_chars(const string_t *src, string_t *rest, size_t count);
+static void skip_n_chars(const string_t src, string_t *rest, size_t count);
 
 /* 
  * Skips all whitespace characters in the src string.
@@ -222,7 +222,7 @@ static void skip_n_chars(const string_t *src, string_t *rest, size_t count);
  * src  - The string to be examined.
  * rest - The remaining part of the original string after whitespaces has been skipped.
  */
-static void skip_whitespace(const string_t *src, string_t *rest);
+static void skip_whitespace(const string_t src, string_t *rest);
 
 /* 
  * Skips the specified string in the src string.
@@ -233,7 +233,7 @@ static void skip_whitespace(const string_t *src, string_t *rest);
  * rest    - The remaining part of the original string after the specified string has been skipped.
  * pattern - The string to be skipped.
  */
-static void skip_string(const string_t *src, string_t *rest, const string_t *pattern);
+static void skip_string(const string_t src, string_t *rest, const string_t *pattern);
 
 /* 
  * Skips the specified C-style string (null-terminated) in the src string.
@@ -248,7 +248,7 @@ static void skip_string(const string_t *src, string_t *rest, const string_t *pat
  *     - n is the number of characters in src
  *     - T is the time complexity for running the predicate.
  */
-static void skip_cstr(const string_t *src, string_t *rest, const char *pattern);
+static void skip_cstr(const string_t src, string_t *rest, const char *pattern);
 
 /* 
  * Skips characters in the src string while the provided predicate function returns true.
@@ -260,7 +260,7 @@ static void skip_cstr(const string_t *src, string_t *rest, const char *pattern);
  * rest - The remaining part of the original string after characters have been skipped.
  * test - A predicate function pointer that defines the skipping condition.
  */
-static void skip_while(const string_t *src, string_t *rest, string_predicate test);
+static void skip_while(const string_t src, string_t *rest, string_predicate test);
 
 /* 
  * Skips characters in the src string until the provided predicate function returns true.
@@ -272,21 +272,21 @@ static void skip_while(const string_t *src, string_t *rest, string_predicate tes
  * rest - The remaining part of the original string after characters have been skipped.
  * test - A predicate function pointer that defines when to stop skipping.
  */
-static void skip_until(const string_t *src, string_t *rest, string_predicate test);
+static void skip_until(const string_t src, string_t *rest, string_predicate test);
 
-static inline uint64_t parse_unsigned(const string_t *const src, string_t *rest, uint64_t max_value) {
+static inline uint64_t parse_unsigned(const string_t src, string_t *rest, uint64_t max_value) {
 
     uint64_t result = 0;
 
-    if (src->chars[0] != '+' && (src->chars[0] < '0' || src->chars[0] > '9')) {
+    *rest = src;
+
+    if (src.chars[0] != '+' && (src.chars[0] < '0' || src.chars[0] > '9')) {
         return result;
     }
 
-    *rest = *src;
-
     /* Copy the values to avoid breaking invariants in case src and rest are the same pointer */
-    const size_t src_count = src->count;
-    const char *src_chars = src->chars;
+    const size_t src_count = src.count;
+    const char *src_chars = src.chars;
 
     size_t i = 0;
     if (src_chars[0] == '+') {
@@ -321,42 +321,38 @@ static inline uint64_t parse_unsigned(const string_t *const src, string_t *rest,
 
 }
 
-static inline int64_t parse_signed(const string_t *src, string_t *rest, int64_t min_value, int64_t max_value) {
+static inline int64_t parse_signed(const string_t src, string_t *rest, int64_t min_value, int64_t max_value) {
 
     int64_t result = 0;
     bool is_negative = false;
 
-    *rest = *src;
+    *rest = src;
 
-    /* Copy the values to avoid breaking invariants in case src and rest are the same pointer */
-    const size_t src_count = src->count;
-    const char *src_chars = src->chars;
-
-    if ((src->chars[0] != '+' && src->chars[0] != '-') && (src->chars[0] < '0' || src->chars[0] > '9')) {
+    if ((src.chars[0] != '+' && src.chars[0] != '-') && (src.chars[0] < '0' || src.chars[0] > '9')) {
         return result;
     }
 
     size_t i = 0;
-    if (src_chars[0] == '+') {
+    if (src.chars[0] == '+') {
 
         ++i;
         if(rest->count > 1) rest->count--;
 
-    } else if (src_chars[0] == '-') {
+    } else if (src.chars[0] == '-') {
 
         is_negative = true;
         ++i;
         if(rest->count > 1) rest->count--;
     }
 
-    if (i == src->count) {
+    if (i == src.count) {
         return result;
     }
 
-    while (i < src_count) {
+    while (i < src.count) {
 
-        char digit = src_chars[i] - '0';
-        rest->chars = &src_chars[i];
+        char digit = src.chars[i] - '0';
+        rest->chars = &src.chars[i];
 
         if ('0' > rest->chars[0] || rest->chars[0] > '9') {
             return result;
@@ -387,55 +383,55 @@ static inline int64_t parse_signed(const string_t *src, string_t *rest, int64_t 
 
 }
 
-static uint64_t parse_u64(const string_t *src, string_t *rest) {
+static uint64_t parse_u64(const string_t src, string_t *rest) {
 
     return parse_unsigned(src, rest, UINT64_MAX);
 
 }
 
-static uint32_t parse_u32(const string_t *src, string_t *rest) {
+static uint32_t parse_u32(const string_t src, string_t *rest) {
 
     return parse_unsigned(src, rest, UINT32_MAX);
 }
 
-static uint16_t parse_u16(const string_t *src, string_t *rest) {
+static uint16_t parse_u16(const string_t src, string_t *rest) {
 
     return parse_unsigned(src, rest, UINT16_MAX);
 }
 
-static uint8_t parse_u8(const string_t *src, string_t *rest) {
+static uint8_t parse_u8(const string_t src, string_t *rest) {
     
     return parse_unsigned(src, rest, UINT8_MAX);
 }
 
-static int64_t parse_i64(const string_t *src, string_t *rest) {
+static int64_t parse_i64(const string_t src, string_t *rest) {
 
     return parse_signed(src, rest, INT64_MIN, INT64_MAX);
 }
 
-static int32_t parse_i32(const string_t *src, string_t *rest) {
+static int32_t parse_i32(const string_t src, string_t *rest) {
     
     return parse_signed(src, rest, INT32_MIN, INT32_MAX);
 }
 
-static int16_t parse_i16(const string_t *src, string_t *rest) {
+static int16_t parse_i16(const string_t src, string_t *rest) {
 
     return parse_signed(src, rest, INT16_MIN, INT16_MAX);
 }
 
-static int8_t parse_i8(const string_t *src, string_t *rest) {
+static int8_t parse_i8(const string_t src, string_t *rest) {
 
     return parse_signed(src, rest, INT8_MIN, INT8_MAX);
 }
 
-static uint8_t parse_digit(const string_t *src, string_t *rest) {
+static uint8_t parse_digit(const string_t src, string_t *rest) {
 
     int8_t result = 0;
 
-    *rest = *src;
+    *rest = src;
 
-    if (rest->count > 0 && ('0' <= src->chars[0] && src->chars[0] <= '9')) {
-        result = src->chars[0] - '0';
+    if (rest->count > 0 && ('0' <= src.chars[0] && src.chars[0] <= '9')) {
+        result = src.chars[0] - '0';
         rest->chars = &rest->chars[1];
         rest->count--;
     }
@@ -443,9 +439,9 @@ static uint8_t parse_digit(const string_t *src, string_t *rest) {
     return result;
 }
 
-static void skip_char(const string_t *src, string_t *rest, char ch) {
+static void skip_char(const string_t src, string_t *rest, char ch) {
 
-    *rest = *src;
+    *rest = src;
 
     if (rest->count > 0 && rest->chars[0] == ch) {
         rest->chars = &rest->chars[1];
@@ -453,11 +449,11 @@ static void skip_char(const string_t *src, string_t *rest, char ch) {
     }
 }
 
-static void skip_n_chars(const string_t *src, string_t *rest, size_t count) {
+static void skip_n_chars(const string_t src, string_t *rest, size_t count) {
 
-    *rest = *src;
+    *rest = src;
 
-    if (count <= src->count) {
+    if (count <= src.count) {
         rest->count -= count;
         rest->chars  = &rest->chars[count];
     } else {
@@ -466,38 +462,38 @@ static void skip_n_chars(const string_t *src, string_t *rest, size_t count) {
 
 }
 
-static void skip_any_of(const string_t *src, string_t *rest, const char *skip, const size_t skip_count) {
+static void skip_any_of(const string_t src, string_t *rest, const char *skip, const size_t skip_count) {
 
-    *rest = *src;
+    *rest = src;
 
     for (size_t i = 0; i < skip_count; ++i) {
         /* Exit when the input matches the char */
         if (rest->chars[0] == skip[i]) {
-            skip_char(rest, rest, skip[i]);
+            skip_char(*rest, rest, skip[i]);
             break;
         }
     }
 
 }
 
-static void skip_all_of(const string_t *src, string_t *rest, const char *skip, const size_t skip_count) {
+static void skip_all_of(const string_t src, string_t *rest, const char *skip, const size_t skip_count) {
 
     bool stop = false;
 
-    *rest = *src;
+    *rest = src;
 
     while (!stop) {
 
         const char *prev_ptr = rest->chars;
 
-        skip_any_of(rest, rest, skip, skip_count);
+        skip_any_of(*rest, rest, skip, skip_count);
 
         /* Stop when it is not possible to advance anymore */
         stop = (rest->count == 0) || (rest->chars == prev_ptr);
     }
 }
 
-static void skip_whitespace(const string_t *src, string_t *rest) {
+static void skip_whitespace(const string_t src, string_t *rest) {
 
     static const char whitespace[] = " \f\n\r\t\v";
     /* Subtract one to account for the null character at the end. */
@@ -506,9 +502,9 @@ static void skip_whitespace(const string_t *src, string_t *rest) {
     skip_all_of(src, rest, whitespace, whitespace_count);
 }
 
-static void skip_string(const string_t *src, string_t *rest, const string_t *pattern) {
+static void skip_string(const string_t src, string_t *rest, const string_t *pattern) {
 
-    *rest = *src;
+    *rest = src;
 
     if (rest->count > 0 && pattern->count > 0 && rest->count >= pattern->count) {
 
@@ -523,31 +519,31 @@ static void skip_string(const string_t *src, string_t *rest, const string_t *pat
         }
     }
 }
-static void skip_all_strings(const string_t *src, string_t *rest, const string_t *pattern) {
+static void skip_all_strings(const string_t src, string_t *rest, const string_t *pattern) {
 
-    *rest = *src;
+    *rest = src;
 
     bool stop = false;
 
     while (!stop) {
         const char *prev_ptr = rest->chars;
 
-        skip_string(rest, rest, pattern);
+        skip_string(*rest, rest, pattern);
 
         stop = (prev_ptr == rest->chars);
     }
 }
 
-static void skip_cstr(const string_t *src, string_t *rest, const char *pattern) {
+static void skip_cstr(const string_t src, string_t *rest, const char *pattern) {
 
     string_t string = string_from_cstr(pattern);
 
     skip_string(src, rest, &string);
 }
 
-static void skip_while(const string_t *src, string_t *rest, string_predicate test) {
+static void skip_while(const string_t src, string_t *rest, string_predicate test) {
     
-    *rest = *src; 
+    *rest = src; 
 
     while (rest->count > 0 && test(rest)) {
         rest->chars = &rest->chars[1];
@@ -555,9 +551,9 @@ static void skip_while(const string_t *src, string_t *rest, string_predicate tes
     }
 }
 
-static void skip_until(const string_t *src, string_t *rest, string_predicate test) {
+static void skip_until(const string_t src, string_t *rest, string_predicate test) {
     
-    *rest = *src; 
+    *rest = src; 
 
     while (rest->count > 0 && !test(rest)) {
         rest->chars = &rest->chars[1];

@@ -43,14 +43,14 @@ typedef struct {
 /* Instantiation and copying */
 
 /* Create a big integer with a given capacity on the underlying array of int64 */
-bigint_t bigint_with_capacity(size_t capacity, const allocator_t *allocator, void *alloc_ctx);
+bigint_t bigint_with_capacity(size_t capacity, const allocator_t *allocator);
 
 /* Create a big integer from a single 64-bit integer */
-bigint_t bigint_from_i64(const int64_t value, const allocator_t *allocator, void *alloc_ctx);
+bigint_t bigint_from_i64(const int64_t value, const allocator_t *allocator);
 /* Create a big integer from a sized string */
-bigint_t bigint_from_string(const string_t *value, const allocator_t *allocator, void *alloc_ctx, error_t *err);
+bigint_t bigint_from_string(const string_t *value, const allocator_t *allocator, error_t *err);
 /* Create a big integer from a null-terminated string */
-bigint_t bigint_from_cstr(const char *value, const allocator_t *allocator, void *alloc_ctx, error_t *err);
+bigint_t bigint_from_cstr(const char *value, const allocator_t *allocator, error_t *err);
 /* Copy a big integer into another */
 void bigint_copy(bigint_t *dst, const bigint_t *src);
 
@@ -58,9 +58,9 @@ void bigint_copy(bigint_t *dst, const bigint_t *src);
 string_builder_t bigint_to_sb(const bigint_t *num,
         /* Allows the use of a different allocator */
         /* than the one used for the bigint itself */
-        const allocator_t *str_allocator, void *str_ctx,
+        const allocator_t *str_allocator,
         /* The algorithm needs to allocate some temporary memory as well */
-        const allocator_t *temp_allocator, void *temp_ctx
+        const allocator_t *temp_allocator
         );
 
 /* Comparison operations */
@@ -77,11 +77,11 @@ bool bigint_gt(const bigint_t *num, const bigint_t *other);
 static inline void bigint_normalize(bigint_t *num);
 
 /* Operations producing new integers */
-bigint_t bigint_add(const bigint_t *num, const bigint_t *other, const allocator_t *allocator, void *alloc_ctx);
-bigint_t bigint_sub(const bigint_t *num, const bigint_t *other, const allocator_t *allocator, void *alloc_ctx);
-bigint_t bigint_mul(const bigint_t *num, const bigint_t *other, const allocator_t *allocator, void *alloc_ctx);
+bigint_t bigint_add(const bigint_t *num, const bigint_t *other, const allocator_t *allocator);
+bigint_t bigint_sub(const bigint_t *num, const bigint_t *other, const allocator_t *allocator);
+bigint_t bigint_mul(const bigint_t *num, const bigint_t *other, const allocator_t *allocator);
 
-divmod_t bigint_divmod(const bigint_t *num, const bigint_t *other, const allocator_t *allocator, void *alloc_ctx, error_t *err);
+divmod_t bigint_divmod(const bigint_t *num, const bigint_t *other, const allocator_t *allocator, error_t *err);
 
 /* In-place operations */
 void bigint_increment(bigint_t *num);
@@ -92,16 +92,16 @@ void bigint_mul_in(bigint_t *num, const bigint_t *other);
 void bigint_mul_in_u64(bigint_t *num, const uint64_t other);
 
 
+#define BIGINT_IMPL
 #ifdef BIGINT_IMPL
 #include "parsing_helpers.h"
-bigint_t bigint_with_capacity(size_t capacity, const allocator_t *allocator, void *alloc_ctx) {
+bigint_t bigint_with_capacity(size_t capacity, const allocator_t *allocator) {
 
     bigint_t result = {
         .array_info = {
             .item_size = sizeof (*result.items),
             .min_capacity = capacity,
             .allocator = allocator,
-            .alloc_ctx = alloc_ctx
         },
         .is_negative = false,
     };
@@ -111,11 +111,11 @@ bigint_t bigint_with_capacity(size_t capacity, const allocator_t *allocator, voi
     return result;
 }
 
-bigint_t bigint_from_i64(const int64_t value, const allocator_t *allocator, void *alloc_ctx) {
+bigint_t bigint_from_i64(const int64_t value, const allocator_t *allocator) {
 
     /* Only one digit is needed, but start with capacity 16 to avoid too much overhead */
     /* when doing operations */
-    bigint_t result = bigint_with_capacity(16, allocator, alloc_ctx);
+    bigint_t result = bigint_with_capacity(16, allocator);
 
     result.is_negative = value < 0;
 
@@ -126,11 +126,11 @@ bigint_t bigint_from_i64(const int64_t value, const allocator_t *allocator, void
     return result;
 }
 
-bigint_t bigint_from_string(const string_t *str, const allocator_t *allocator, void *alloc_ctx, error_t *err) {
+bigint_t bigint_from_string(const string_t *str, const allocator_t *allocator, error_t *err) {
 
     err->is_error = false;
 
-    bigint_t result = bigint_with_capacity((str->count / LOG_10_BASE) + 1, allocator, alloc_ctx);
+    bigint_t result = bigint_with_capacity((str->count / LOG_10_BASE) + 1, allocator);
 
     /* If the string is empty return 0 */
     if (str->count == 0) {
@@ -162,7 +162,7 @@ bigint_t bigint_from_string(const string_t *str, const allocator_t *allocator, v
         string_t rest;
 
         /* This parsing is safe because of the above check, as long as BASE <= UINT32_MAX */
-        uint64_t value_u64 = parse_u64(&updated_view, &rest) % BASE;
+        uint64_t value_u64 = parse_u64(updated_view, &rest) % BASE;
 
         result.items = da_append(result.items, &result.array_info, &value_u64);
         goto defer;
@@ -201,9 +201,9 @@ defer:
     return result;
 }
 
-bigint_t bigint_from_cstr(const char *value, const allocator_t *allocator, void *alloc_ctx, error_t *err) {
+bigint_t bigint_from_cstr(const char *value, const allocator_t *allocator, error_t *err) {
     string_t str = string_from_cstr(value);
-    return bigint_from_string(&str, allocator, alloc_ctx, err);
+    return bigint_from_string(&str, allocator, err);
 }
 
 void bigint_copy(bigint_t *dst, const bigint_t *src) {
@@ -220,15 +220,14 @@ void bigint_copy(bigint_t *dst, const bigint_t *src) {
 
 string_builder_t bigint_to_sb(const bigint_t *num, 
         /* Allocator for the memory of the returned string */
-        const allocator_t *str_alloc, void *str_ctx,
+        const allocator_t *str_alloc,
         /* Allocator for temporary memory used in the subroutine */
-        const allocator_t *temp_alloc, void *temp_ctx
+        const allocator_t *temp_alloc
         ) {
     string_builder_t sb = {
         .array_info = {
             .item_size = sizeof (*sb.items),
             .allocator = str_alloc,
-            .alloc_ctx = str_ctx
         }
     };
 
@@ -240,13 +239,13 @@ string_builder_t bigint_to_sb(const bigint_t *num,
     /* Upper bound: 9 digits per segment on the internal array */
     sb.items = da_reserve( sb.items, &sb.array_info, num->array_info.count * 9);
 
-    bigint_t working_copy = bigint_with_capacity(num->array_info.count, temp_alloc, temp_ctx);
+    bigint_t working_copy = bigint_with_capacity(num->array_info.count, temp_alloc);
     bigint_copy(&working_copy, num);
 
     /* Revert the working_copy, as it is easier to make the conversion if it is in big endian */
     da_reverse(working_copy.items, &working_copy.array_info);
 
-    bigint_t quotient = bigint_with_capacity(working_copy.array_info.capacity, working_copy.array_info.allocator, working_copy.array_info.alloc_ctx);
+    bigint_t quotient = bigint_with_capacity(working_copy.array_info.capacity, working_copy.array_info.allocator);
     while (working_copy.array_info.count > 0) {
         quotient.array_info.count = 0;
         uint64_t carry = 0;
@@ -462,7 +461,7 @@ static inline void __bigint_sub_helper(bigint_t *num, const bigint_t *other) {
 
     } else {
         /*@todo: Check if we can avoid this allocation when doing reciprocal subtraction */
-        bigint_t temp = bigint_with_capacity(other->array_info.count, num->array_info.allocator, num->array_info.alloc_ctx);
+        bigint_t temp = bigint_with_capacity(other->array_info.count, num->array_info.allocator);
         bigint_copy(&temp, other);
 
         /* Swap the inputs of the algorithm and flip the sign of the result */
@@ -626,11 +625,11 @@ void bigint_div_in_u32(bigint_t *num, const uint32_t other, uint32_t *remainder)
  * @todo: Look into Donald Knuth's division algorithm again, from the description found on:
  * https://skanthak.hier-im-netz.de/division.html
  */
-divmod_t bigint_divmod(const bigint_t *dividend, const bigint_t *divisor, const allocator_t *allocator, void *alloc_ctx, error_t *err) {
+divmod_t bigint_divmod(const bigint_t *dividend, const bigint_t *divisor, const allocator_t *allocator, error_t *err) {
 
     divmod_t result = {
-        .quotient  = bigint_with_capacity(dividend->array_info.count - divisor->array_info.count + 1, allocator, alloc_ctx),
-        .remainder = bigint_with_capacity(divisor->array_info.count, allocator, alloc_ctx),
+        .quotient  = bigint_with_capacity(dividend->array_info.count - divisor->array_info.count + 1, allocator),
+        .remainder = bigint_with_capacity(divisor->array_info.count, allocator),
     };
 
     if (divisor->array_info.count == 0 || divisor->items[divisor->array_info.count-1] == 0) {
@@ -652,7 +651,7 @@ divmod_t bigint_divmod(const bigint_t *dividend, const bigint_t *divisor, const 
         .items = divisor->items
     };
 
-    bigint_t temp = bigint_with_capacity(dividend->array_info.count, allocator, alloc_ctx);
+    bigint_t temp = bigint_with_capacity(dividend->array_info.count, allocator);
 
     for (size_t j = dividend->array_info.count; j > 0; --j) {
 

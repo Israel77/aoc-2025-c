@@ -18,7 +18,7 @@ static int tests_failed = 0;
 
 /* Verify that a pointer returned by the allocator is non‑NULL and usable */
 static void test_primitive(void) {
-    int *p = (int *)global_std_allocator.alloc(NULL, sizeof(int));
+    int *p = (int *)allocator_alloc(&global_std_allocator, sizeof(int));
     if (p) {
         TEST_OK("alloc int");
     } else {
@@ -30,13 +30,13 @@ static void test_primitive(void) {
     } else {
         TEST_FAIL("write/read int");
     }
-    global_std_allocator.free(NULL, p, sizeof(int));
+    allocator_free(&global_std_allocator, p, sizeof(int));
 }
 
 /* Verify allocation of an array */
 static void test_array(void) {
     size_t n = 10;
-    double *arr = (double *)global_std_allocator.alloc(NULL, n * sizeof(double));
+    double *arr = (double *)allocator_alloc(&global_std_allocator, n * sizeof(double));
     if (arr) {
         TEST_OK("alloc array");
     } else {
@@ -52,12 +52,12 @@ static void test_array(void) {
     } else {
         TEST_FAIL("array contents");
     }
-    global_std_allocator.free(NULL, arr, n * sizeof(double));
+    allocator_free(&global_std_allocator, arr, n * sizeof(double));
 }
 
 /* Verify allocation of a struct */
 static void test_struct(void) {
-    test_struct_t *s = (test_struct_t *)global_std_allocator.alloc(NULL, sizeof(test_struct_t));
+    test_struct_t *s = (test_struct_t *)allocator_alloc(&global_std_allocator, sizeof(test_struct_t));
     if (s) {
         TEST_OK("alloc struct");
     } else {
@@ -72,13 +72,13 @@ static void test_struct(void) {
     } else {
         TEST_OK("struct fields");
     }
-    global_std_allocator.free(NULL, s, sizeof(test_struct_t));
+    allocator_free(&global_std_allocator, s, sizeof(test_struct_t));
 }
 
 /* Verify realloc works (grow and shrink) */
 static void test_realloc(void) {
     size_t initial = 5;
-    int *p = (int *)global_std_allocator.alloc(NULL, initial * sizeof(int));
+    int *p = (int *)allocator_alloc(&global_std_allocator, initial * sizeof(int));
     if (p) {
         TEST_OK("alloc for realloc");
     } else {
@@ -87,7 +87,7 @@ static void test_realloc(void) {
     for (size_t i = 0; i < initial; ++i) p[i] = (int)i;
 
     size_t larger = 12;
-    p = (int *)global_std_allocator.realloc(NULL, p, initial * sizeof(int),
+    p = (int *)allocator_realloc(&global_std_allocator, p, initial * sizeof(int),
                                             larger * sizeof(int));
     if (p) {
         TEST_OK("realloc grow");
@@ -106,7 +106,7 @@ static void test_realloc(void) {
     }
 
     size_t smaller = 3;
-    p = (int *)global_std_allocator.realloc(NULL, p, larger * sizeof(int),
+    p = (int *)allocator_realloc(&global_std_allocator, p, larger * sizeof(int),
                                             smaller * sizeof(int));
     if (p) {
         TEST_OK("realloc shrink");
@@ -124,7 +124,7 @@ static void test_realloc(void) {
         TEST_FAIL("realloc preserve data (shrink)");
     }
 
-    global_std_allocator.free(NULL, p, smaller * sizeof(int));
+    allocator_free(&global_std_allocator, p, smaller * sizeof(int));
 }
 
 /* Main driver */

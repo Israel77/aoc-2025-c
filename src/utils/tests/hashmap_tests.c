@@ -39,9 +39,7 @@ static void report_assert(bool cond, const char *msg) {
  * ------------------------------------------------------------- */
 static void test_init(void) {
     error_t err = {0};
-    hashmap_t hm = hm_init(&global_std_allocator, NULL,
-                           string_hash, string_eq,
-                           0, &err);
+    hashmap_t hm = hm_init(&global_std_allocator, string_hash, string_eq, 0, &err);
     report_assert(!err.is_error, "hm_init – no error");
     report_assert(hm.count == 0, "hm_init – count == 0");
     report_assert(hm.tombstones == 0, "hm_init – tombstones == 0");
@@ -54,9 +52,7 @@ static void test_init(void) {
  * ------------------------------------------------------------- */
 static void test_insert_one(void) {
     error_t err = {0};
-    hashmap_t hm = hm_init(&global_std_allocator, NULL,
-                           string_hash, string_eq,
-                           0, &err);
+    hashmap_t hm = hm_init(&global_std_allocator, string_hash, string_eq, 0, &err);
 
     string_t key = string_from_cstr("apple");
     string_t val = string_from_cstr("red");
@@ -77,9 +73,7 @@ static void test_insert_one(void) {
  * ------------------------------------------------------------- */
 static void test_insert_duplicate(void) {
     error_t err = {0};
-    hashmap_t hm = hm_init(&global_std_allocator, NULL,
-                           string_hash, string_eq,
-                           0, &err);
+    hashmap_t hm = hm_init(&global_std_allocator, string_hash, string_eq, 0, &err);
 
     string_t key = string_from_cstr("banana");
     string_t v1  = string_from_cstr("yellow");
@@ -105,9 +99,7 @@ static void test_insert_duplicate(void) {
  * ------------------------------------------------------------- */
 static void test_delete_existing(void) {
     error_t err = {0};
-    hashmap_t hm = hm_init(&global_std_allocator, NULL,
-                           string_hash, string_eq,
-                           0, &err);
+    hashmap_t hm = hm_init(&global_std_allocator, string_hash, string_eq, 0, &err);
 
     string_t key = string_from_cstr("cherry");
     string_t val = string_from_cstr("dark red");
@@ -130,9 +122,7 @@ static void test_delete_existing(void) {
  * ------------------------------------------------------------- */
 static void test_delete_multiple(void) {
     error_t err = {0};
-    hashmap_t hm = hm_init(&global_std_allocator, NULL,
-                           string_hash, string_eq,
-                           12, &err);
+    hashmap_t hm = hm_init(&global_std_allocator, string_hash, string_eq, 12, &err);
 
     /* Store the keys and values in an arena to ensure they will outlive the hashmap */
     uint8_t *buffer = malloc(4096);
@@ -206,9 +196,7 @@ static void test_delete_multiple(void) {
  * ------------------------------------------------------------- */
 static void test_delete_compress(void) {
     error_t err = {0};
-    hashmap_t hm = hm_init(&global_std_allocator, NULL,
-                           int64_hash, int64_eq,
-                           100, &err);
+    hashmap_t hm = hm_init(&global_std_allocator, int64_hash, int64_eq, 100, &err);
 
     /* Store the keys and values in an arena to ensure they will outlive the hashmap */
     uint8_t *buffer = malloc(4096);
@@ -251,9 +239,7 @@ static void test_delete_compress(void) {
  * ------------------------------------------------------------- */
 static void test_delete_missing(void) {
     error_t err = {0};
-    hashmap_t hm = hm_init(&global_std_allocator, NULL,
-                           string_hash, string_eq,
-                           0, &err);
+    hashmap_t hm = hm_init(&global_std_allocator, string_hash, string_eq, 0, &err);
 
     string_t missing = string_from_cstr("nonexistent");
     void *deleted = hm_delete(&hm, &missing);
@@ -270,9 +256,7 @@ static void test_delete_missing(void) {
 static void test_resize(void) {
     error_t err = {0};
     /* Small initial capacity to force a resize quickly */
-    hashmap_t hm = hm_init(&global_std_allocator, NULL,
-                           string_hash, string_eq,
-                           8, &err);
+    hashmap_t hm = hm_init(&global_std_allocator, string_hash, string_eq, 8, &err);
     size_t initial_cap = hm.capacity;
 
     /* arena allocator for the strings */

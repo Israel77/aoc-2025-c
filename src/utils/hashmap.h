@@ -35,7 +35,6 @@ typedef struct {
     eq_func_t   eq_func;
 
     const allocator_t *allocator;
-    void        *alloc_ctx;
 
     size_t count;
     size_t tombstones;
@@ -65,7 +64,7 @@ typedef struct {
  * Returns:
  *     Previous values stored in the same key.
  */
-static hashmap_t hm_init(const allocator_t *allocator, void *alloc_ctx,
+static hashmap_t hm_init(const allocator_t *allocator, 
         const hash_func_t hash_func, const eq_func_t eq_func,
         size_t desired_capacity, error_t *err);
 /*
@@ -118,6 +117,7 @@ static void *hm_delete(hashmap_t *hm, const void *key);
  */
 static void hm_destroy(hashmap_t *hm);
 
+#define HM_IMPL
 #ifdef HM_IMPL
 static inline uint64_t hm_hash(const hashmap_t *hm, const void *key) {
     return hm->hash_func(key) % hm->usable_capacity;
@@ -139,7 +139,7 @@ static inline bool hm_rehash(hashmap_t *hm, size_t old_capacity) {
         needs_rehash = &hm->data[hm->usable_capacity];
     } else {
         temp_allocated = true;
-        needs_rehash = hm->allocator->alloc(hm->alloc_ctx, hm->count * sizeof (hm_node_t));
+        needs_rehash = hm->allocator->interface->alloc(hm->allocator->alloc_ctx, hm->count * sizeof (hm_node_t));
     }
 
     if (!needs_rehash) {
@@ -162,7 +162,7 @@ static inline bool hm_rehash(hashmap_t *hm, size_t old_capacity) {
     }
 
     if (temp_allocated) {
-        hm->allocator->free(hm->alloc_ctx, needs_rehash, hm->count * sizeof (hm_node_t));
+        hm->allocator->interface->free(hm->allocator->alloc_ctx, needs_rehash, hm->count * sizeof (hm_node_t));
     }
 
     /* there should be no tombstones after rehashing */
@@ -228,7 +228,7 @@ static inline bool hm_grow(hashmap_t *hm) {
     }
 
     /* needs to allocate more memory */
-    hm_node_t *data_ptr = hm->allocator->realloc(hm->alloc_ctx, hm->data, old_capacity * sizeof (hm_node_t), new_capacity * sizeof (hm_node_t));
+    hm_node_t *data_ptr = hm->allocator->interface->realloc(hm->allocator->alloc_ctx, hm->data, old_capacity * sizeof (hm_node_t), new_capacity * sizeof (hm_node_t));
     if (!data_ptr) {
         return false;
     }
@@ -250,7 +250,7 @@ static inline bool hm_shrink(hashmap_t *hm) {
 }
 
 
-static hashmap_t hm_init(const allocator_t *allocator, void *alloc_ctx,
+static hashmap_t hm_init(const allocator_t *allocator,
         const hash_func_t hash_func, const eq_func_t eq_func,
         size_t desired_capacity, error_t *err) {
 
@@ -258,7 +258,7 @@ static hashmap_t hm_init(const allocator_t *allocator, void *alloc_ctx,
         desired_capacity = HM_DEFAULT_CAPACITY;
     }
 
-    hm_node_t *data = allocator->alloc(alloc_ctx, desired_capacity * sizeof (hm_node_t));
+    hm_node_t *data = allocator->interface->alloc(allocator->alloc_ctx, desired_capacity * sizeof (hm_node_t));
 
     if (!data) {
         err->is_error = true;
@@ -269,7 +269,6 @@ static hashmap_t hm_init(const allocator_t *allocator, void *alloc_ctx,
 
     hashmap_t result = {
         .allocator         = allocator,
-        .alloc_ctx         = alloc_ctx,
         .hash_func         = hash_func,
         .eq_func           = eq_func,
         .capacity          = desired_capacity,
@@ -285,7 +284,7 @@ static hashmap_t hm_init(const allocator_t *allocator, void *alloc_ctx,
 }
 
 static void hm_destroy(hashmap_t *hm) {
-    hm->allocator->free(hm->alloc_ctx, hm->data, hm->capacity * sizeof (hm_node_t));
+    hm->allocator->interface->free(hm->allocator->alloc_ctx, hm->data, hm->capacity * sizeof (hm_node_t));
 }
 
 static void *hm_insert(hashmap_t *hm, void *key, void *value, error_t *err) {

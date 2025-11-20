@@ -14,6 +14,7 @@
 #endif /* #ifndef NULL */
 
 #include "macros.h"
+#include "typedefs.h"
 
 /* The basic data structure that represents a generic allocator */
 typedef struct {
@@ -25,33 +26,59 @@ typedef struct {
     void (*free)(void *ctx, void *ptr, const size_t size);
     /* (Optional) Reclaims all the memory that was allocated within the given context */
     void (*free_all)(void *ctx);
+} allocator_iface;
+
+typedef struct {
+    const allocator_iface *interface;
+    void                  *alloc_ctx;
 } allocator_t;
+
+void *allocator_alloc(const allocator_t *allocator, size_t size) {
+    return allocator->interface->alloc(allocator->alloc_ctx, size);
+}
+
+void *allocator_realloc(const allocator_t *allocator, void *ptr, const size_t old_size, const size_t new_size) {
+    return allocator->interface->realloc(allocator->alloc_ctx, ptr, old_size, new_size);
+}
+
+void allocator_free(const allocator_t *allocator, void *ptr, const size_t size) {
+    return allocator->interface->free(allocator->alloc_ctx, ptr, size);
+}
+
+void allocator_free_all(const allocator_t *allocator) {
+    return allocator->interface->free_all(allocator->alloc_ctx);
+}
 
 #ifdef ALLOC_STD_IMPL
 
 #include <stdlib.h>
 
-static void *std_alloc(void *ctx, const size_t size) {
+internal void *std_alloc(void *ctx, const size_t size) {
     UNUSED(ctx);
     return malloc(size);
 }
 
-static void *std_realloc(void *ctx, void *ptr, const size_t old_size, const size_t new_size) {
+internal void *std_realloc(void *ctx, void *ptr, const size_t old_size, const size_t new_size) {
     UNUSED(ctx);
     UNUSED(old_size);
     return realloc(ptr, new_size);
 }
 
-static void std_free(void *ctx, void *ptr, const size_t size) {
+internal void std_free(void *ctx, void *ptr, const size_t size) {
     UNUSED(ctx);
     UNUSED(size);
     return free(ptr);
 }
 
-static const allocator_t global_std_allocator = {
+global_var const allocator_iface _global_std_allocator_interface = {
     .alloc = std_alloc,
     .realloc = std_realloc,
     .free = std_free
+};
+
+global_var const allocator_t global_std_allocator = {
+    .interface = &_global_std_allocator_interface,
+    .alloc_ctx = NULL
 };
 
 #endif /* #ifdef ALLOC_STD_IMPL */
@@ -97,8 +124,8 @@ struct arena_context_t {
     struct arena_region_t *end;
     enum arena_flags flags;
     /* If the backend is a custom allocator */
-    allocator_t *optional_allocator;
-    allocator_t *optional_alloc_ctx;
+    allocator_iface *optional_allocator;
+    allocator_iface *optional_alloc_ctx;
 };
 
 /* 
@@ -112,8 +139,8 @@ struct arena_context_t {
  * Returns:
  *     A pointer to the newly allocated arena context (NULL if the allocation failed).
  */
-static inline arena_context_t arena_init(const size_t ensure_capacity, enum arena_flags flags,
-        allocator_t *optional_allocator, void *optional_alloc_ctx);
+internal inline arena_context_t arena_init(const size_t ensure_capacity, enum arena_flags flags,
+        allocator_iface *optional_allocator, void *optional_alloc_ctx);
 
 /* 
  * Creates an arena that uses an existing memory buffer supplied by the caller. No allocation is
@@ -125,37 +152,37 @@ static inline arena_context_t arena_init(const size_t ensure_capacity, enum aren
  *    Pointer to an arena_context_t that references the supplied buffer. NULL if buffer is zero or
  *    it does not have enough capacity to store the arena context metadata.
  */
-static inline arena_context_t *arena_from_buf(uint8_t *buf, const size_t buf_capacity);
+internal inline arena_context_t *arena_from_buf(uint8_t *buf, const size_t buf_capacity);
 
-static inline void *arena_alloc(void *ctx, const size_t size);
+internal inline void *arena_alloc(void *ctx, const size_t size);
 
 
-static inline void *arena_realloc(void *ctx, void *ptr,
+internal inline void *arena_realloc(void *ctx, void *ptr,
                                  const size_t old_size,
                                  const size_t new_size);
 
-static inline void arena_free(void *ctx, void *ptr, const size_t size);
+internal inline void arena_free(void *ctx, void *ptr, const size_t size);
 
-static inline void arena_destroy(void *ctx);
+internal inline void arena_destroy(void *ctx);
 
-static inline void arena_reset(arena_context_t *ctx);
+internal inline void arena_reset(arena_context_t *ctx);
 
-static inline void *arena_bump_aligned(arena_region_t *ctx,
+internal inline void *arena_bump_aligned(arena_region_t *ctx,
                                              size_t size,
                                              size_t alignment);
 
-static inline void *arena_alloc_aligned(void *ctx, const size_t size, const size_t alignment);
+internal inline void *arena_alloc_aligned(void *ctx, const size_t size, const size_t alignment);
 
 
-static allocator_t arena_allocator = {
+global_var allocator_iface arena_interface = {
     .alloc    = arena_alloc,
     .realloc  = arena_realloc,
     .free     = arena_free,
     .free_all = arena_destroy
 };
 
-static inline arena_context_t arena_init(size_t capacity, enum arena_flags flags,
-        allocator_t *optional_allocator, void *optional_alloc_ctx) {
+internal inline arena_context_t arena_init(size_t capacity, enum arena_flags flags,
+        allocator_iface *optional_allocator, void *optional_alloc_ctx) {
 
     arena_context_t result; 
 
@@ -207,7 +234,7 @@ static inline arena_context_t arena_init(size_t capacity, enum arena_flags flags
     return result;
 }
 
-static inline arena_context_t *arena_from_buf(uint8_t *buf, const size_t buf_capacity) {
+internal inline arena_context_t *arena_from_buf(uint8_t *buf, const size_t buf_capacity) {
 
     const uint64_t metadata_size = sizeof (arena_context_t) + sizeof (arena_region_t);
     const uint64_t remaining_capacity = buf_capacity - metadata_size;
@@ -228,13 +255,13 @@ static inline arena_context_t *arena_from_buf(uint8_t *buf, const size_t buf_cap
     return result;
 }
 
-static inline void *arena_alloc(void *ctx, const size_t size) {
+internal inline void *arena_alloc(void *ctx, const size_t size) {
 
     return arena_alloc_aligned(ctx, size, ARENA_DEFAULT_ALIGN);
 
 }
 
-static inline void *arena_realloc(void *ctx, void *ptr, const size_t old_size, const size_t new_size){
+internal inline void *arena_realloc(void *ctx, void *ptr, const size_t old_size, const size_t new_size){
 
     void *result = arena_alloc(ctx, new_size);
 
@@ -245,7 +272,7 @@ static inline void *arena_realloc(void *ctx, void *ptr, const size_t old_size, c
     return result;
 }
 
-static inline void arena_free(void *ctx, void *ptr, const size_t size) {
+internal inline void arena_free(void *ctx, void *ptr, const size_t size) {
 
     /*
     arena_context_t *arena = ctx;
@@ -256,13 +283,13 @@ static inline void arena_free(void *ctx, void *ptr, const size_t size) {
     */
 
     /* Stop warnings about the arena_allocator as well */
-    UNUSED(arena_allocator);
+    UNUSED(arena_interface);
     UNUSED(ctx);
     UNUSED(ptr);
     UNUSED(size);
 }
 
-static inline void arena_destroy(void *ctx) {
+internal inline void arena_destroy(void *ctx) {
 
     arena_context_t *arena = ctx;
 
@@ -292,7 +319,7 @@ static inline void arena_destroy(void *ctx) {
     }
 }
 
-static inline void arena_reset(arena_context_t *ctx) {
+internal inline void arena_reset(arena_context_t *ctx) {
 
     arena_context_t *arena = ctx;
 
@@ -303,7 +330,7 @@ static inline void arena_reset(arena_context_t *ctx) {
     }
 }
 
-static inline void *arena_bump_aligned(arena_region_t *ctx,
+internal inline void *arena_bump_aligned(arena_region_t *ctx,
                                              size_t size,
                                              size_t alignment) {
 
@@ -330,7 +357,7 @@ static inline void *arena_bump_aligned(arena_region_t *ctx,
 
 }
 
-static inline void *arena_alloc_aligned(void *ctx, const size_t size, const size_t alignment) {
+internal inline void *arena_alloc_aligned(void *ctx, const size_t size, const size_t alignment) {
 
     void *result = NULL;
     arena_context_t *arena = ctx;

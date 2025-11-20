@@ -16,7 +16,6 @@
 #define STRING_UTILS_IMPL
 #include "../string_utils.h"
 
-#include "../error.h"
 #include "../macros.h"
 
 static int tests_passed = 0;
@@ -26,9 +25,8 @@ static void test_sb_from_cstr(void) {
     const char *src = "hello world";
 
     const allocator_t *a = &global_std_allocator;
-    void *ctx = NULL;
 
-    string_builder_t sb = sb_from_cstr(src, a, ctx);
+    string_builder_t sb = sb_from_cstr(src, a);
 
     bool ok = true;
     ok &= (sb.array_info.count == strlen(src));
@@ -45,9 +43,8 @@ static void test_sb_from_cstr(void) {
 static void test_sb_with_capacity(void) {
     const size_t req_cap = 10;
     const allocator_t *a = &global_std_allocator;
-    void *ctx = NULL;
 
-    string_builder_t sb = sb_with_capacity(req_cap, a, ctx);
+    string_builder_t sb = sb_with_capacity(req_cap, a);
 
     bool ok = true;
     ok &= (sb.array_info.count == 0);
@@ -57,14 +54,13 @@ static void test_sb_with_capacity(void) {
     if (ok) TEST_OK("sb_with_capacity basic functionality");
     else    TEST_FAIL("sb_with_capacity basic functionality");
 
-    a->free(ctx, sb.items, sb.array_info.capacity * sizeof(char));
+    allocator_free(a, sb.items, sb.array_info.capacity * sizeof(char));
 }
 
 static void test_sb_append_char(void) {
     const allocator_t *a = &global_std_allocator;
-    void *ctx = NULL;
 
-    string_builder_t sb = sb_with_capacity(2, a, ctx);
+    string_builder_t sb = sb_with_capacity(2, a);
 
     sb_append_char(&sb, 'A');
     sb_append_char(&sb, 'B');
@@ -78,14 +74,13 @@ static void test_sb_append_char(void) {
     if (ok) TEST_OK("sb_append_char with growth");
     else    TEST_FAIL("sb_append_char with growth");
 
-    a->free(ctx, sb.items, sb.array_info.capacity * sizeof(char));
+    allocator_free(a, sb.items, sb.array_info.capacity * sizeof(char));
 }
 
 static void test_sb_append_cstr(void) {
     const allocator_t *a = &global_std_allocator;
-    void *ctx = NULL;
 
-    string_builder_t sb = sb_with_capacity(5, a, ctx);
+    string_builder_t sb = sb_with_capacity(5, a);
 
     sb_append_cstr(&sb, "foo");
     sb_append_cstr(&sb, "barbaz");   /* longer than remaining capacity */
@@ -98,14 +93,13 @@ static void test_sb_append_cstr(void) {
     if (ok) TEST_OK("sb_append_cstr with reallocation");
     else    TEST_FAIL("sb_append_cstr with reallocation");
 
-    a->free(ctx, sb.items, sb.array_info.capacity * sizeof(char));
+    allocator_free(a, sb.items, sb.array_info.capacity * sizeof(char));
 }
 
 static void test_sb_append_str_sized(void) {
     const allocator_t *a = &global_std_allocator;
-    void *ctx = NULL;
 
-    string_builder_t sb = sb_with_capacity(0, a, ctx);
+    string_builder_t sb = sb_with_capacity(0, a);
 
     string_t part1 = string_from_cstr("Hello, ");
     string_t part2 = string_from_cstr("World!");
@@ -121,15 +115,14 @@ static void test_sb_append_str_sized(void) {
     if (ok) TEST_OK("sb_append_str (sized string)");
     else    TEST_FAIL("sb_append_str (sized string)");
 
-    a->free(ctx, sb.items, sb.array_info.capacity * sizeof(char));
+    allocator_free(a, sb.items, sb.array_info.capacity * sizeof(char));
 }
 
 static void test_sb_append_sb(void) {
     const allocator_t *a = &global_std_allocator;
-    void *ctx = NULL;
 
-    string_builder_t src = sb_from_cstr("src", a, ctx);
-    string_builder_t dst = sb_with_capacity(1, a, ctx);   /* tiny start → forces growth */
+    string_builder_t src = sb_from_cstr("src", a);
+    string_builder_t dst = sb_with_capacity(1, a);   /* tiny start → forces growth */
 
     sb_append_sb(&dst, &src);
 
@@ -141,21 +134,20 @@ static void test_sb_append_sb(void) {
     if (ok) TEST_OK("sb_append_sb");
     else    TEST_FAIL("sb_append_sb");
 
-    a->free(ctx, src.items, src.array_info.capacity * sizeof(char));
-    a->free(ctx, dst.items, dst.array_info.capacity * sizeof(char));
+    allocator_free(a, src.items, src.array_info.capacity * sizeof(char));
+    allocator_free(a, dst.items, dst.array_info.capacity * sizeof(char));
 }
 
 static void test_string_split_by_char(void) {
     /* Use the global standard allocator for simplicity */
     const allocator_t *a   = &global_std_allocator;
-    void       *ctx  = NULL;
 
     /* Input string: "a,b,,c" – note the empty token between the two commas */
     const char *src_cstr = "a,b,,c";
     string_t src = string_from_cstr(src_cstr);
 
     /* Split on ',' */
-    string_array_t parts = string_split_by_char(&src, ',', a, ctx);
+    string_array_t parts = string_split_by_char(&src, ',', a);
     if (parts.array_info.count == 0) {
         TEST_FAIL("string_split returned empty array");
         return;
@@ -189,13 +181,11 @@ static void test_string_split_by_char(void) {
 
     if (ok) TEST_OK("string_split correctly splits string with empty token");
 
-    a->free(ctx, parts.items, parts.array_info.capacity * sizeof(string_t));
+    allocator_free(a, parts.items, parts.array_info.capacity * sizeof(string_t));
 }
 
 static void test_sb_build(void) {
-    string_builder_t sb = sb_with_capacity(0,
-                                           &global_std_allocator,   /* allocator */
-                                           NULL);                  /* alloc_ctx */
+    string_builder_t sb = sb_with_capacity(0, &global_std_allocator);
 
     sb_append_cstr(&sb, "test string");   /* sb.count becomes 11, NUL‑terminated */
 
@@ -209,18 +199,19 @@ static void test_sb_build(void) {
     if (ok) TEST_OK("sb_build returns correct string view");
     else    TEST_FAIL("sb_build returned incorrect view");
 
-    sb.array_info.allocator->free(sb.array_info.alloc_ctx,
-                        sb.items,
-                        sb.array_info.capacity * sizeof(char));
+    allocator_free(sb.array_info.allocator, sb.items, sb.array_info.capacity * sizeof(char));
 }
 
 static void test_sb_reversion() {
 
-    const allocator_t *a = &arena_allocator;
     arena_context_t ctx = arena_init(64, ARENA_MALLOC_BACKEND, NULL, NULL);
+    const allocator_t a = {
+        .interface = &arena_interface,
+        .alloc_ctx = &ctx
+    };
 
-    string_builder_t base = sb_from_cstr("123456789", a, &ctx);
-    string_builder_t rev = sb_from_cstr("987654321", a, &ctx);
+    string_builder_t base = sb_from_cstr("123456789", &a);
+    string_builder_t rev = sb_from_cstr("987654321", &a);
     da_reverse(base.items, &base.array_info);
 
     bool ok = da_equals(base.items, &base.array_info, rev.items, &rev.array_info);
@@ -228,7 +219,7 @@ static void test_sb_reversion() {
     if (ok) TEST_OK("string buffer can be reversed");
     else    TEST_FAIL("string buffer reversion did not work");
 
-    arena_allocator.free_all(&ctx);
+    allocator_free_all(&a);
 }
 
 
@@ -236,7 +227,6 @@ static void test_sb_reversion() {
  *  Main – run all tests and report summary
  *------------------------------------------------------------------*/
 int main(void) {
-    UNUSED(arena_allocator);
 
     test_sb_from_cstr();
     test_sb_with_capacity();

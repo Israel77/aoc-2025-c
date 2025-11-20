@@ -178,7 +178,7 @@ static void test_arena_reset_reuse(void)
 static void test_primitive(void) {
     arena_context_t arena = arena_init(4096, ARENA_MALLOC_BACKEND | ARENA_GROWABLE | ARENA_FAST_ALLOC, NULL, NULL);
 
-    int *p = (int *)arena_allocator.alloc(&arena, sizeof(int));
+    int *p = (int *)arena_alloc(&arena, sizeof(int));
     if (!p) {
         TEST_FAIL("arena alloc int");
     } else {
@@ -191,7 +191,7 @@ static void test_primitive(void) {
         TEST_OK("arena alloc int");
     }
 
-    arena_allocator.free(&arena, p, sizeof(int));   /* no‑op but allowed */
+    arena_free(&arena, p, sizeof(int));   /* no‑op but allowed */
 
     arena_destroy(&arena);   /* clean up all chunks */
 }
@@ -200,7 +200,7 @@ static void test_array(void) {
     arena_context_t arena = arena_init(4096, ARENA_MALLOC_BACKEND | ARENA_GROWABLE | ARENA_FAST_ALLOC, NULL, NULL);
 
     const size_t N = 32;
-    double *arr = (double *)arena_allocator.alloc(&arena, N * sizeof(double));
+    double *arr = (double *)arena_alloc(&arena, N * sizeof(double));
     if (!arr) {
         TEST_FAIL("arena alloc array");
     } else {
@@ -218,7 +218,7 @@ static void test_array(void) {
 
     /* Grow the array using arena_realloc (allocates a new block) */
     const size_t M = 64;
-    double *arr2 = (double *)arena_allocator.realloc(&arena, arr,
+    double *arr2 = (double *)arena_realloc(&arena, arr,
                                                    N * sizeof(double),
                                                    M * sizeof(double));
 
@@ -247,7 +247,7 @@ static void test_array(void) {
         TEST_FAIL("arena new region write");
     }
 
-    arena_allocator.free(&arena, arr2, M * sizeof(double));   /* no‑op */
+    arena_free(&arena, arr2, M * sizeof(double));   /* no‑op */
 
     arena_destroy(&arena);
 }
@@ -255,7 +255,7 @@ static void test_array(void) {
 static void test_struct(void) {
     arena_context_t arena = arena_init(4096, ARENA_MALLOC_BACKEND | ARENA_GROWABLE | ARENA_FAST_ALLOC, NULL, NULL);
 
-    test_struct_t *s = (test_struct_t *)arena_allocator.alloc(&arena,
+    test_struct_t *s = (test_struct_t *)arena_alloc(&arena,
                                                              sizeof(test_struct_t));
     if (!s) {
         TEST_FAIL("arena alloc struct");
@@ -281,7 +281,7 @@ static void test_chunks_reset(void) {
     void *ptrs[blocks_needed];
 
     for (size_t i = 0; i < blocks_needed; ++i) {
-        ptrs[i] = arena_allocator.alloc(&arena, block_sz);
+        ptrs[i] = arena_alloc(&arena, block_sz);
         if (!ptrs[i]) TEST_FAIL("arena alloc multiple chunks");
         memset(ptrs[i], (int)i, block_sz);
     }
@@ -297,7 +297,7 @@ static void test_chunks_reset(void) {
     arena_reset(&arena);
 
     /* After reset allocate new objects and ensure they work */
-    int *x = (int *)arena_allocator.alloc(&arena, sizeof(int));
+    int *x = (int *)arena_alloc(&arena, sizeof(int));
     if (!x) {
         TEST_FAIL("arena alloc after reset");
     }
@@ -306,7 +306,7 @@ static void test_chunks_reset(void) {
 
     /* Allocate a larger block to ensure a new chunk can be created again */
     size_t large_sz = 8192;   /* larger than any existing chunk */
-    void *large = arena_allocator.alloc(&arena, large_sz);
+    void *large = arena_alloc(&arena, large_sz);
     if (!large) TEST_FAIL("arena alloc large after reset");
     memset(large, 0xAA, large_sz);
 
