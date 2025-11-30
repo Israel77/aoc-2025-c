@@ -87,13 +87,21 @@ global_var const allocator_t global_std_allocator = {
 #ifdef ALLOC_ARENA_IMPL
 
 #ifndef ARENA_DEFAULT_ALIGN
-#define ARENA_DEFAULT_ALIGN (2 * sizeof (void *))
-#endif /* #ifndef ARENA_CHUNK_DEFAULT_CAP */
+#define ARENA_DEFAULT_ALIGN 2 * sizeof (void *)
+#endif /* #ifndef ARENA_DEFAULT_ALIGN */
 
+#ifndef ARENA_COMMIT_SIZE
+#define ARENA_COMMIT_SIZE KB(16)
+#endif
+
+#ifndef ARENA_VIRTUAL_MAX_SIZE
+#define ARENA_VIRTUAL_MAX_SIZE GB(1)
+#endif
+
+#include <sys/mman.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
-#include <sys/mman.h>
 #include <unistd.h>
 
 enum arena_flags {
@@ -114,18 +122,33 @@ typedef struct arena_region_t arena_region_t;
 struct arena_region_t {
     arena_region_t *next;
     size_t offset;
+    size_t commited;
     size_t capacity;
 
     uint8_t data[];
+};
+
+/* If the backend is a custom allocator */
+struct arena_custom_context_t {
+    allocator_iface *optional_allocator;
+    void *optional_alloc_ctx;
+};
+
+struct arena_virtual_context_t {
+    size_t commit_size;
+    size_t page_size;
 };
 
 struct arena_context_t {
     struct arena_region_t *begin;
     struct arena_region_t *end;
     enum arena_flags flags;
-    /* If the backend is a custom allocator */
-    allocator_iface *optional_allocator;
-    allocator_iface *optional_alloc_ctx;
+    union {
+        /* Data for the custom backend allocator */
+        struct arena_custom_context_t custom_context;
+        /* Data for the virtual allocator backend */
+        struct arena_virtual_context_t virtual_context;
+    };
 };
 
 /* 
@@ -169,7 +192,9 @@ internal inline void arena_reset(arena_context_t *ctx);
 
 internal inline void *arena_bump_aligned(arena_region_t *ctx,
                                              size_t size,
-                                             size_t alignment);
+                                             size_t alignment,
+                                             size_t commit_size,
+                                             enum arena_flags flags);
 
 internal inline void *arena_alloc_aligned(void *ctx, const size_t size, const size_t alignment);
 
@@ -204,21 +229,35 @@ internal inline arena_context_t arena_init(size_t capacity, enum arena_flags fla
     }
 
     if (flags & ARENA_CUSTOM_BACKEND) {
-
         result.begin = optional_allocator->alloc(optional_alloc_ctx, actual_capacity);
+
+        result.custom_context.optional_allocator = optional_allocator;
+        result.custom_context.optional_alloc_ctx = optional_alloc_ctx;
     }
 
     if (flags & ARENA_VIRTUAL_BACKEND) {
 
         const uint64_t page_size = sysconf(_SC_PAGESIZE);
+        result.virtual_context.page_size = page_size;
+        result.virtual_context.commit_size = ARENA_COMMIT_SIZE;
 
-        actual_capacity = ALIGN_POW_2(actual_capacity, page_size);
+        // capacity = ALIGN_POW_2(actual_capacity, page_size);
+        capacity = ARENA_VIRTUAL_MAX_SIZE;
 
-        result.begin = mmap(NULL, actual_capacity,
-                PROT_READ | PROT_WRITE,
+        result.begin = mmap(NULL, capacity,
+                PROT_NONE,
                 MAP_PRIVATE | MAP_ANON | MAP_NORESERVE,
                 -1, 0);
 
+        if (result.begin) {
+            size_t to_commit = round_up(sizeof (result), result.virtual_context.commit_size);
+            int try_commit = mprotect(result.begin, to_commit, PROT_READ | PROT_WRITE);
+            if (try_commit < 0) {
+                result.begin = 0;
+            } else {
+                result.begin->commited = to_commit;
+            }
+        }
     }
 
     if (result.begin) result.begin->next = NULL;
@@ -227,9 +266,6 @@ internal inline arena_context_t arena_init(size_t capacity, enum arena_flags fla
     result.begin->capacity  = capacity;
     result.end              = result.begin;
     result.flags            = flags;
-
-    result.optional_allocator = optional_allocator;
-    result.optional_alloc_ctx = optional_alloc_ctx;
 
     return result;
 }
@@ -306,7 +342,7 @@ internal inline void arena_destroy(void *ctx) {
 
         uint64_t dealloc_size  = sizeof (*current) + current->capacity;
         if (arena->flags & ARENA_CUSTOM_BACKEND) {
-            arena->optional_allocator->free(arena->optional_alloc_ctx, current, dealloc_size);
+            arena->custom_context.optional_allocator->free(arena->custom_context.optional_alloc_ctx, current, dealloc_size);
         } else if (arena->flags & ARENA_MALLOC_BACKEND) {
             free(current);
         } else if (arena->flags & ARENA_VIRTUAL_BACKEND) {
@@ -325,14 +361,33 @@ internal inline void arena_reset(arena_context_t *ctx) {
 
     arena_region_t *current = arena->begin;
     while (current != NULL) {
+        arena_region_t *next = current->next;
+
+        // Only do this if we have allocated enough memory to surpass the capacity of a single block
+        if (arena->flags & ARENA_VIRTUAL_BACKEND && (arena->begin != arena->end)) {
+            mprotect(current, current->capacity, PROT_NONE);
+            madvise(current, current->capacity,  MADV_DONTNEED);
+
+            // Recommit only the first chunk
+            mprotect(current, arena->virtual_context.commit_size, PROT_READ | PROT_WRITE);
+            madvise(current, current->capacity,  MADV_COLD);
+
+            current->capacity = ARENA_VIRTUAL_MAX_SIZE;
+            current->commited = arena->virtual_context.commit_size;
+            current->next = next;
+        }
+
         current->offset = 0;
-        current = current->next;
+
+        current = next;
     }
 }
 
-internal inline void *arena_bump_aligned(arena_region_t *ctx,
+internal inline void *arena_bump_aligned(arena_region_t *region,
                                              size_t size,
-                                             size_t alignment) {
+                                             size_t alignment,
+                                             size_t commit_size,
+                                             enum arena_flags flags) {
 
 
     /* Ensure alignment is a power of two; otherwise the rounding logic is undefined. */
@@ -340,24 +395,40 @@ internal inline void *arena_bump_aligned(arena_region_t *ctx,
         return NULL; 
     }
 
-    uintptr_t raw_ptr     = (uintptr_t)ctx->data + (uintptr_t)ctx->offset;
+    uintptr_t raw_ptr     = (uintptr_t)region->data + (uintptr_t)region->offset;
 
     uintptr_t aligned_ptr = ALIGN_POW_2(raw_ptr, alignment);
     size_t padding = (size_t)(aligned_ptr - raw_ptr);
 
     size_t total_needed = padding + size;
 
-    if (ctx->capacity - ctx->offset < total_needed) {
+    if (region->capacity - region->offset < total_needed) {
         return NULL;
     }
 
-    ctx->offset += total_needed;
+    region->offset += total_needed;
+
+    if ((flags & ARENA_VIRTUAL_BACKEND)) {
+
+        size_t to_commit = round_up(region->offset + sizeof (*region), commit_size);
+
+        if (to_commit > region->capacity) {
+            return NULL;
+        }
+
+        if (to_commit > region->commited) {
+            int try_commit = mprotect(region, to_commit, PROT_READ | PROT_WRITE);
+            if (try_commit < 0) {
+                return NULL;
+            }
+        }
+        region->commited = to_commit;
+    }
 
     return (void *)aligned_ptr;
-
 }
 
-internal inline void *arena_alloc_aligned(void *ctx, const size_t size, const size_t alignment) {
+internal void *arena_alloc_aligned(void *ctx, const size_t size, const size_t alignment) {
 
     void *result = NULL;
     arena_context_t *arena = ctx;
@@ -367,7 +438,7 @@ internal inline void *arena_alloc_aligned(void *ctx, const size_t size, const si
     }
 
     /* Try to allocate within the first region */
-    result = arena_bump_aligned(arena->begin, size, alignment);
+    result = arena_bump_aligned(arena->begin, size, alignment, arena->virtual_context.commit_size, arena->flags);
     if (result != NULL
             || (arena->flags & ARENA_BUFFER_BACKEND)
             || !(arena->flags & ARENA_GROWABLE)) {
@@ -382,10 +453,10 @@ internal inline void *arena_alloc_aligned(void *ctx, const size_t size, const si
         try_region = arena->begin->next;
     }
 
-    result = arena_bump_aligned(try_region, size ,alignment);
+    result = arena_bump_aligned(try_region, size, alignment, arena->virtual_context.commit_size, arena->flags);
 
     while (result == NULL && try_region->next != NULL) {
-        result = arena_bump_aligned(try_region->next, size ,alignment);
+        result = arena_bump_aligned(try_region->next, size, alignment, arena->virtual_context.commit_size, arena->flags);
         try_region = try_region->next;
     }
 
@@ -400,29 +471,35 @@ internal inline void *arena_alloc_aligned(void *ctx, const size_t size, const si
 
         if (arena->flags & ARENA_CUSTOM_BACKEND) {
 
-            try_region->next = arena->optional_allocator->alloc(arena->optional_alloc_ctx, new_capacity);
+            try_region->next = arena->custom_context.optional_allocator->alloc(arena->custom_context.optional_alloc_ctx, new_capacity);
         }
 
         if (arena->flags & ARENA_VIRTUAL_BACKEND) {
 
-            const uint64_t page_size = sysconf(_SC_PAGESIZE);
-
-            new_capacity = ALIGN_POW_2(new_capacity, page_size);
+            new_capacity = ALIGN_POW_2(new_capacity, arena->virtual_context.page_size);
 
             try_region->next = mmap(NULL, new_capacity,
-                    PROT_READ | PROT_WRITE,
+                    PROT_NONE,
                     MAP_PRIVATE | MAP_ANON | MAP_NORESERVE,
                     -1, 0);
+
+            if (try_region->next == (void*)-1) {
+                try_region->next = 0;
+            }
         }
 
         try_region = try_region->next;
         if (try_region) {
 
+            if (arena->flags & ARENA_VIRTUAL_BACKEND) {
+                mprotect(try_region, arena->virtual_context.commit_size, PROT_READ | PROT_WRITE);
+            }
+
             try_region->offset   = 0;
             try_region->capacity = new_capacity;
             try_region->next     = 0;
 
-            result = arena_bump_aligned(try_region, size, alignment);
+            result = arena_bump_aligned(try_region, size, alignment, arena->virtual_context.commit_size, arena->flags);
             arena->end = try_region;
         }
     }

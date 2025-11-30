@@ -32,8 +32,10 @@
 #define max(a, b) ((a) > (b)) ? (a) : (b)
 #define min(a, b) ((a) < (b)) ? (a) : (b)
 #define sign_of(x) ((x) == 0) ? (0) : (((x) > 0) ? (1) : (-1))
+#define round_up(x, base) ((((x) + (base) - 1) / (base)) * (base))
 
 #define KB(x) (x) * 1024
 #define MB(x) (x) * 1024 * 1024
+#define GB(x) (x) * 1024 * 1024 * 1024
 
 #endif

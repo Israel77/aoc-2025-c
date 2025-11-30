@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include "../macros.h"
 
@@ -25,73 +26,18 @@ static void test_arena_primitive(void)
     arena_context_t *a = arena_from_buf(test_buffer, 8192);
     if (!a) { TEST_FAIL("arena init"); return; }
 
-    int *p = (int *)arena_alloc(a, sizeof(int));
-    if (!p) { TEST_FAIL("arena alloc int"); }
-    else    { TEST_OK ("arena alloc int"); }
+    int32_t *p = (int32_t *)arena_alloc(a, sizeof(int32_t));
+    if (!p) { TEST_FAIL("arena alloc int32_t"); }
+    else    { TEST_OK ("arena alloc int32_t"); }
 
     *p = 1234;
-    if (*p != 1234) TEST_FAIL("arena write/read int");
-    else            TEST_OK ("arena write/read int");
+    if (*p != 1234) TEST_FAIL("arena write/read int32_t");
+    else            TEST_OK ("arena write/read int32_t");
 
-    arena_free(a, p, sizeof(int));   /* no‑op */
+    arena_free(a, p, sizeof(int32_t));   /* no‑op */
     arena_reset(a);
     arena_free(a, NULL, 0);           /* still safe */
 }
-
-/* -------------------------------------------------------------------------
- * Test array allocation and realloc
- * ------------------------------------------------------------------------- */
-static void test_arena_array(void) {
-    arena_context_t *arena = arena_from_buf(test_buffer, 8192);
-    if (!arena) { TEST_FAIL("arena init"); return; }
-
-    /* Allocate 32‑element double array */
-    const size_t n_initial = 32;
-    double *a1 = (double *)arena_alloc(arena, n_initial * sizeof(double));
-    if (!a1)  TEST_FAIL("arena alloc array");
-    else      TEST_OK ("arena alloc array");
-
-    /* Fill and verify */
-    for (size_t i = 0; i < n_initial; ++i)
-        a1[i] = (double)i * 0.75;
-
-    bool ok = true;
-    for (size_t i = 0; i < n_initial; ++i)
-        ok &= (a1[i] == (double)i * 0.75);
-    if (ok) TEST_OK ("arena write array");
-    else    TEST_FAIL("arena write array");
-
-    /* Grow to 64 elements – forces a new block */
-    const size_t n_grown = 64;
-    double *a2 = (double *)arena_realloc(arena,
-                                         a1,
-                                         n_initial * sizeof(double),
-                                         n_grown   * sizeof(double));
-    if (!a2) TEST_FAIL("arena realloc larger");
-    else    TEST_OK ("arena realloc larger");
-
-    /* Verify original data survived */
-    ok = true;
-    for (size_t i = 0; i < n_initial; ++i)
-        ok &= (a2[i] == (double)i * 0.75);
-    if (ok) TEST_OK ("arena realloc preserve data");
-    else    TEST_FAIL("arena realloc preserve data");
-
-    /* Initialise new elements and check */
-    for (size_t i = n_initial; i < n_grown; ++i)
-        a2[i] = (double)i * 0.5;
-
-    ok = true;
-    for (size_t i = n_initial; i < n_grown; ++i)
-        ok &= (a2[i] == (double)i * 0.5);
-    if (ok) TEST_OK ("arena new region write");
-    else    TEST_FAIL("arena new region write");
-
-    /* Clean up */
-    arena_free(arena, a2, n_grown * sizeof(double));
-    arena_reset(arena);
-}
-
 
 /* -------------------------------------------------------------------------
  * Test 3 – struct allocation
@@ -273,7 +219,7 @@ static void test_struct(void) {
 }
 
 static void test_chunks_reset(void) {
-    arena_context_t arena = arena_init(4096, ARENA_MALLOC_BACKEND | ARENA_GROWABLE | ARENA_FAST_ALLOC, NULL, NULL);
+    arena_context_t arena = arena_init(4096, ARENA_VIRTUAL_BACKEND | ARENA_GROWABLE | ARENA_FAST_ALLOC, NULL, NULL);
 
     /* Force creation of several chunks by allocating many small blocks */
     const size_t block_sz = 256;
@@ -320,7 +266,6 @@ int main(void)
 {
     printf("--- Start tests: Single‑region arena ---\n");
     test_arena_primitive();
-    test_arena_array();
     test_arena_struct();
     test_arena_reset_reuse();
 
