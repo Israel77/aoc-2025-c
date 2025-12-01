@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-YEAR=2021
+YEAR=2025
 
 # Save your session string from the browser in a single line file named session.cookie
 # Example: If you find session=abcdef... in your browser cookies on the AoC website,

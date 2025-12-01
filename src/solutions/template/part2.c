@@ -27,6 +27,7 @@ void *p2_solve(void *arg) {
         p2_setup(ctx);
     }
 
+    sync_all(ctx);
 
     if (thread_idx == thread_count - 1) {
         ctx->common->output = string_from_cstr("Not implemented yet!");

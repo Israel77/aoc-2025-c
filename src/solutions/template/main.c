@@ -5,8 +5,11 @@
 #define FILE_CAP 100 * 8 * 1024
 #define MAX_THREADS 32
 static unsigned char file_buffer[FILE_CAP];
-static arena_context_t *file_arena;
-static arena_context_t solution_arena;
+static arena_context_t *file_arena_ctx;
+static arena_context_t solution_arena_ctx;
+
+static allocator_t file_arena;
+static allocator_t solution_arena;
 
 static string_t read_file();
 static inline void setup();
@@ -78,7 +81,7 @@ int main(void) {
     printf("Took: %'ld ns\n", clock_end - clock_start);
 #endif
 
-    arena_destroy(&solution_arena);
+    arena_destroy(&solution_arena_ctx);
 
     return 0;
 }
@@ -88,15 +91,20 @@ static inline void setup() {
     setlocale(LC_NUMERIC, "pt_BR.UTF-8");
 
     /* Setup arenas */
-    file_arena = arena_from_buf(file_buffer, FILE_CAP);
-    solution_arena = arena_init(4096, ARENA_FAST_ALLOC | ARENA_GROWABLE | ARENA_MALLOC_BACKEND, NULL, NULL);
+    file_arena_ctx = arena_from_buf(file_buffer, FILE_CAP);
+    file_arena.alloc_ctx = file_arena_ctx;
+    file_arena.interface = &arena_interface;
+
+    solution_arena_ctx = arena_init(4096, ARENA_FAST_ALLOC | ARENA_GROWABLE | ARENA_VIRTUAL_BACKEND, NULL, NULL);
+    solution_arena.alloc_ctx = &solution_arena_ctx;
+    solution_arena.interface = &arena_interface;
 
     /* Load the file into memory */
     input = read_file();
 
     /* Setup contexts for each part */
     p1_common.input = &input;
-    p1_common.arena = &solution_arena;
+    p1_common.arena = &solution_arena_ctx;
     p1_common.thread_count = min(MAX_THREADS, P1_THREADS);
 
     pthread_barrier_init(&p1_common.barrier, NULL, p1_common.thread_count);
@@ -107,7 +115,7 @@ static inline void setup() {
     }
 
     p2_common.input = &input;
-    p2_common.arena = &solution_arena;
+    p2_common.arena = &solution_arena_ctx;
     p2_common.thread_count = min(MAX_THREADS, P2_THREADS);
 
     pthread_barrier_init(&p2_common.barrier, NULL, p2_common.thread_count);
@@ -123,7 +131,7 @@ static string_t read_file() {
     FILE *file = fopen("inputs/day_XX.txt", "r");
     assert(file && "File not found");
 
-    string_builder_t file_sb = sb_read_file(file, &arena_allocator, file_arena);
+    string_builder_t file_sb = sb_read_file(file, &file_arena);
 
     string_t file_str = sb_build(&file_sb);
 

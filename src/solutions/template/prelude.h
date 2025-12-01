@@ -73,7 +73,7 @@ static inline void p2_setup(struct part_context *ctx);
 void *p2_solve(void *ctx);
 
 /* Common utilities */
-static inline void sync(struct part_context *ctx) {
+internal inline void sync_all(struct part_context *ctx) {
     if (ctx->common->thread_count > 1) pthread_barrier_wait(&ctx->common->barrier);
 }
 
