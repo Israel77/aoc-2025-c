@@ -1,5 +1,5 @@
 #include "prelude.h"
-//#define PART_2_IMPL
+#define PART_2_IMPL
 
 #define P2_THREADS 1
 
@@ -30,6 +30,8 @@ void *p2_solve(void *arg) {
     sync_all(ctx);
 
     if (thread_idx == thread_count - 1) {
+        string_builder_t sb;
+        UNUSED(sb);
         ctx->common->output = string_from_cstr("Not implemented yet!");
     }
 

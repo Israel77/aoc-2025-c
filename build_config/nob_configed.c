@@ -218,9 +218,9 @@ static void include_utils_tests(void) {
 
 void include_solutions(void) {
 
-    // if (nob_file_exists("solutions/template/template.c") == 0)
-    //     nob_da_append(&build_paths,"solutions/template/template");
-    //
+    // if (nob_file_exists("solutions/template/main.c") == 0)
+    //     nob_da_append(&build_paths,"solutions/template/main");
+
 
     if (COMPILE_SOLUTIONS[0] == 0) {
         for (int day = 1; day <= 25; ++day) {

@@ -1,8 +1,7 @@
 #include "prelude.h"
 #include "part1.c"
 #include "part2.c"
-#include "tests.c"
-
+// #include "tests.c"
 #define FILE_CAP 100 * 8 * 1024
 #define MAX_THREADS 32
 static unsigned char file_buffer[FILE_CAP];
@@ -32,7 +31,7 @@ int main(void) {
 
     setup();
 
-    printf("\n==== Day XX ====\n");
+    printf("\n==== Day 02 ====\n");
 
 #ifdef TEST_IMPL
     run_tests();
@@ -90,7 +89,6 @@ int main(void) {
 }
 
 static inline void setup() {
-
     setlocale(LC_NUMERIC, "pt_BR.UTF-8");
 
     /* Setup arenas */
@@ -107,7 +105,7 @@ static inline void setup() {
 
     /* Setup contexts for each part */
     p1_common.input = &input;
-    p1_common.arena = &solution_arena_ctx;
+    p1_common.arena = &solution_arena;
     p1_common.thread_count = min(MAX_THREADS, P1_THREADS);
 
     pthread_barrier_init(&p1_common.barrier, NULL, p1_common.thread_count);
@@ -118,7 +116,7 @@ static inline void setup() {
     }
 
     p2_common.input = &input;
-    p2_common.arena = &solution_arena_ctx;
+    p2_common.arena = &solution_arena;
     p2_common.thread_count = min(MAX_THREADS, P2_THREADS);
 
     pthread_barrier_init(&p2_common.barrier, NULL, p2_common.thread_count);
@@ -127,11 +125,12 @@ static inline void setup() {
         p2_contexts[i].thread_idx = i;
         p2_contexts[i].common     = &p2_common;
     }
+
 }
 
 static string_t read_file() {
 
-    FILE *file = fopen("inputs/day_XX.txt", "r");
+    FILE *file = fopen("inputs/day_02.txt", "r");
     assert(file && "File not found");
 
     string_builder_t file_sb = sb_read_file(file, &file_arena);

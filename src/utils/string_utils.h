@@ -65,7 +65,7 @@ void string_sprintln(char *buffer, const string_t *str);
 
 /* Convert integer types to strings */
 string_builder_t sb_from_u64(const uint64_t value, const allocator_t *allocator);
-
+string_builder_t sb_from_i64(const int64_t value, const allocator_t *allocator);
 
 
 #define STRING_UTILS_IMPL
@@ -330,6 +330,34 @@ string_builder_t sb_from_u64(const uint64_t value, const allocator_t *allocator)
         result.items[0] = '0';
         result.array_info.count = 1;
         return result;
+    }
+
+    while (current > 0) {
+        unsigned char digit = '0' + (current % 10);
+        result.items[result.array_info.count++] = digit;
+        current /= 10;
+    }
+
+    da_reverse(result.items, &result.array_info);
+
+    return result;
+}
+
+string_builder_t sb_from_i64(const int64_t value, const allocator_t *allocator) {
+
+    string_builder_t result = sb_with_capacity(20, allocator);
+
+    int64_t current = value;
+
+    if (value == 0) {
+        result.items[0] = '0';
+        result.array_info.count = 1;
+        return result;
+    }
+
+    if (value < 0) {
+        result.items[result.array_info.count++] = '-';
+        current = -value;
     }
 
     while (current > 0) {

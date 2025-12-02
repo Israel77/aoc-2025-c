@@ -1,5 +1,5 @@
 #include "prelude.h"
-#define TEST_IMPL
+// #define TEST_IMPL
 
 static arena_context_t test_arena;
 

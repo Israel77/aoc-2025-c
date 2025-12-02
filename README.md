@@ -16,7 +16,7 @@ For simple problems, multithreading might also make the solution slower, because
 | Day | Part 1 | Part 2 | Multithreaded |
 |-----|--------|--------|---------------|
 | 01  | ✅     | ✅     | No            |
-| 02  | ❌     | ❌     |               |
+| 02  | ✅     | ✅     | Yes           |
 | 03  | ❌     | ❌     |               |
 | 04  | ❌     | ❌     |               |
 | 05  | ❌     | ❌     |               |
