@@ -1,6 +1,9 @@
 #include "prelude.h"
+#include <assert.h>
 #include <stdatomic.h>
-#include <stddef.h>
+#include <immintrin.h>
+#include <stdint.h>
+#include <string.h>
 #define PART_1_IMPL
 
 #define P1_THREADS 16
@@ -84,15 +87,16 @@ internal void p1_count_invalid_ids(struct part_context *ctx) {
 
 
     for (size_t i = start; i < end; ++i) {
+        u8 local_buffer[256];
+        allocator_t local_arena = {
+            .interface = &arena_interface,
+            .alloc_ctx = arena_from_buf(local_buffer, 256)
+        };
 
         range_inclusive_t range = p1.ranges[i];
 
         for (u64 curr = range.start; curr <= range.end; ++curr) {
-            u8 local_buffer[256];
-            allocator_t local_arena = {
-                .interface = &arena_interface,
-                .alloc_ctx = arena_from_buf(local_buffer, 256)
-            };
+            arena_reset(local_arena.alloc_ctx);
 
             string_builder_t sb = sb_from_u64(curr, &local_arena);
 
@@ -100,15 +104,18 @@ internal void p1_count_invalid_ids(struct part_context *ctx) {
                 continue;
             }
 
-            u16 mid = sb.array_info.count/2;
+            u8 mid = sb.array_info.count/2;
 
-            for (u8 char_idx = 0; char_idx < mid; ++char_idx) {
-                if (sb.items[char_idx] != sb.items[mid + char_idx]) {
-                    goto next;
-                }
-            }
-            atomic_fetch_add(&p1.invalid_total, curr);
-next:
+            /* 128-bit = 16x8-bit, we expect less than 20 characters per number,
+             * therefore less than 10 characters per half */
+            __m128i a = {0};
+            __m128i b = {0};
+            memcpy(&a, sb.items, mid);
+            memcpy(&b, &sb.items[mid], mid);
+
+            __mmask32 mask = _mm_cmp_epu8_mask(a, b, _MM_CMPINT_EQ);
+            if (mask == 0xFFFF)
+                atomic_fetch_add(&p1.invalid_total, curr);
         }
     }
 }

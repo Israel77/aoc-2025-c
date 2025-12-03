@@ -27,7 +27,7 @@
 #define ALIGN_POW_2(x, n) (( (x) + ( (n) - 1 )) & ~( (n) - 1 ))
 
 #define PROF_START(x) { const char *section = (x); uint64_t __clock_start = now_ns();
-#define PROF_END  uint64_t __clock_end = now_ns(); printf("%s took: %'ld ns\n", section, __clock_end - __clock_start);}
+#define PROF_END(label)  uint64_t __clock_end = now_ns(); printf("%s: %s took: %'ld ns\n", label, section, __clock_end - __clock_start);}
 
 #define max(a, b) ((a) > (b)) ? (a) : (b)
 #define min(a, b) ((a) < (b)) ? (a) : (b)

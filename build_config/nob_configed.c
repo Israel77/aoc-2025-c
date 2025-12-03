@@ -296,7 +296,7 @@ static int build_from_src(void) {
         // Optimized version
         nob_cc(cmd);
         nob_cc_flags(cmd);
-        nob_cmd_append(cmd, "-O3", "-g", "-Wno-unused-function", "-std=c11", "-DALLOC_STD_IMPL", "-D_DEFAULT_SOURCE");
+        nob_cmd_append(cmd, "-O3", "-g", "-Wno-unused-function", "-march=znver4","-std=c11", "-DALLOC_STD_IMPL", "-D_DEFAULT_SOURCE");
         nob_cc_output(cmd, output_file);
         nob_cc_inputs(cmd, input_file);
         
@@ -314,7 +314,7 @@ static int build_from_src(void) {
         // Debug version
         nob_cc(cmd_dbg);
         nob_cc_flags(cmd_dbg);
-        nob_cmd_append(cmd_dbg, "-O0",  "-g", "-Wno-unused-function", "-std=c11", "-DDEBUG_MODE", "-DALLOC_STD_IMPL","-D_DEFAULT_SOURCE", "-finstrument-functions");
+        nob_cmd_append(cmd_dbg, "-O0",  "-g", "-Wno-unused-function", "-march=znver4", "-std=c11", "-DDEBUG_MODE", "-DALLOC_STD_IMPL","-D_DEFAULT_SOURCE", "-finstrument-functions");
         nob_cc_output(cmd_dbg, output_file_dbg);
         nob_cc_inputs(cmd_dbg, input_file);
         

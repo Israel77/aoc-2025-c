@@ -1,5 +1,7 @@
 #include "prelude.h"
+#include <stddef.h>
 #define PART_2_IMPL
+#define range_inclusive_len(range) (range.end - range.start + 1)
 
 #define P2_THREADS 8
 
@@ -26,7 +28,6 @@ void *p2_solve(void *arg) {
     size_t thread_count = ctx->common->thread_count;
     size_t thread_idx   = ctx->thread_idx;
 
-    UNUSED(p2);
     UNUSED(input);
 
     if (thread_idx == 0) {
@@ -47,11 +48,15 @@ void *p2_solve(void *arg) {
     return NULL;
 }
 
-static inline void p2_setup(struct part_context *ctx) {
+internal inline void p2_setup(struct part_context *ctx) {
 
     string_t *input = ctx->common->input;
+    size_t thread_count = ctx->common->thread_count;
 
     string_t to_parse = *input;
+
+    range_inclusive_t preliminar_ranges[P2_MAX_RANGES];
+    size_t preliminar_range_count = 0;
 
     while (to_parse.count > 0) {
 
@@ -66,7 +71,49 @@ static inline void p2_setup(struct part_context *ctx) {
         skip_char(to_parse, &to_parse, ',');
         skip_whitespace(to_parse, &to_parse);
 
-        p2.ranges[p2.range_count++] = new_range;
+        preliminar_ranges[preliminar_range_count++] = new_range;
+    }
+
+    /* Average range per thread */
+    u64 avg_range_size = 0;
+    for (size_t i = 0; i < preliminar_range_count; ++i) {
+        avg_range_size += (preliminar_ranges[i].end - preliminar_ranges[i].start + 1) / (preliminar_range_count * thread_count);
+    }
+
+    /* Running difference between range sizes and average range size */
+    u64 remaining_size = avg_range_size;
+    /* Split ranges equally */
+    for (size_t i = 0; i < preliminar_range_count; ++i) {
+        /* Split the range if it is too big */
+        range_inclusive_t current_range = preliminar_ranges[i];
+        if (remaining_size < (current_range.end - current_range.start)) {
+            range_inclusive_t lower_range = {
+                .start = current_range.start,
+                .end   = current_range.start + remaining_size
+            };
+            range_inclusive_t upper_range = {
+                .start   = current_range.start + remaining_size + 1,
+                .end     = current_range.end
+            };
+            p2.ranges[p2.range_count++] = lower_range;
+            p2.ranges[p2.range_count++] = upper_range;
+
+            if (range_inclusive_len(upper_range) > avg_range_size) {
+                remaining_size = avg_range_size;
+            } else {
+                remaining_size = avg_range_size - range_inclusive_len(upper_range);
+            }
+        } else {
+            /* If there is no need to split, just add the range length to the running difference */
+            remaining_size -= range_inclusive_len(preliminar_ranges[i]);
+            p2.ranges[p2.range_count++] = current_range;
+        }
+
+        /* If the remainder is too small, reset it immediately */
+        if (remaining_size <= ctx->common->thread_count) {
+            remaining_size = avg_range_size;
+        }
+
     }
 }
 
@@ -84,7 +131,7 @@ internal void p2_count_invalid_ids(struct part_context *ctx) {
     const size_t start = thread_idx * tasks_per_thread + prev_remainders;
     const size_t end = start + tasks_per_thread + (take_remainder ? 1 : 0);
 
-
+    u64 local_sum = 0;
     for (size_t i = start; i < end; ++i) {
 
         range_inclusive_t range = p2.ranges[i];
@@ -110,8 +157,7 @@ internal void p2_count_invalid_ids(struct part_context *ctx) {
                     bool all_digits_equal = true;
                     for (u8 s_idx = 0; s_idx < num_splits; ++s_idx) {
                         if (sb.items[s_idx * split_size + c_idx] != sb.items[c_idx]) {
-                            all_digits_equal = false;
-                            break;
+                            all_digits_equal = false; break;
                         }
                     }
                     all_splits_equal &= all_digits_equal;
@@ -120,8 +166,9 @@ internal void p2_count_invalid_ids(struct part_context *ctx) {
             }
             
             if (is_invalid) {
-                atomic_fetch_add(&p2.invalid_total, curr);
+                local_sum += curr;
             }
         }
     }
+    atomic_fetch_add(&p2.invalid_total, local_sum);
 }
