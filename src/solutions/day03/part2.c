@@ -9,7 +9,7 @@
 
 /* Shared data between threads */
 struct p2_data {
-    atomic_uint_fast64_t total_joltage
+    atomic_uint_fast64_t total_joltage;
 };
 
 static p2_data p2;
@@ -37,6 +37,8 @@ void *p2_solve(void *arg) {
         string_builder_t sb = sb_from_u64(p2.total_joltage, ctx->common->arena);
         ctx->common->output = sb_build(&sb);
     }
+
+    return NULL;
 }
 
 
