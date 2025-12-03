@@ -65,11 +65,21 @@ static inline void p1_calculate(struct part_context *ctx) {
         };
 
         u64 first_digit  = 0;
-        u64 first_idx    = 0;
         u64 second_digit = 0;
-        u64 second_idx   = 0;
-        u64 curr_idx     = 0;
 
+        while (line.count > 0) {
+            u8 curr_digit = parse_digit(line, &line);
+
+            if (curr_digit > first_digit && line.count > 1) {
+                first_digit = curr_digit;
+            } else if (curr_digit > second_digit) {
+                second_digit = curr_digit;
+            }
+
+            skip_whitespace(line, &line);
+        }
+
+        local_joltage += 10 * first_digit + second_digit;
     }
 
     atomic_fetch_add(&p1.total_joltage, local_joltage);
