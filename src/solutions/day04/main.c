@@ -37,7 +37,7 @@ int main(void) {
 
     setup();
 
-    printf("\n==== Day XX ====\n");
+    printf("\n==== Day 04 ====\n");
 
 #ifdef TEST_IMPL
     run_tests();
@@ -132,7 +132,7 @@ static void run_part_1() {
     }
 }
 static void run_part_2() {
-    memset(&p2, 0, sizeof (p1));
+    memset(&p2, 0, sizeof (p2));
 
     if (min(MAX_THREADS, P2_THREADS) > 1) {
         for (size_t i = 0; i < p2_contexts[0].common->thread_count; ++i) {

@@ -26,7 +26,7 @@ This should compile the entire project. The programs for each day are stored in 
 | 01  | ✅     | ✅     | No            |
 | 02  | ✅     | ✅     | Yes           |
 | 03  | ✅     | ✅     | No*           |
-| 04  | ❌     | ❌     |               |
+| 04  | ✅     | ✅     | No            |
 | 05  | ❌     | ❌     |               |
 | 06  | ❌     | ❌     |               |
 | 07  | ❌     | ❌     |               |
@@ -36,4 +36,4 @@ This should compile the entire project. The programs for each day are stored in 
 | 11  | ❌     | ❌     |               |
 | 12  | ❌     | ❌     |               |
 
-* Able to run in parallel, but no performance gain observed.
+`*` Able to run in parallel, but no performance gain observed.

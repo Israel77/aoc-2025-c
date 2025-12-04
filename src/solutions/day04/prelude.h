@@ -80,10 +80,16 @@ internal inline void sync_all(struct part_context *ctx) {
     if (ctx->common->thread_count > 1) pthread_barrier_wait(&ctx->common->barrier);
 }
 
-static inline uint64_t now_ns(void) {
+internal inline uint64_t now_ns(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000000000ULL + ts.tv_nsec;
 }
+
+enum point_type {
+    EMPTY = 0,
+    PAPER_ROLL,
+    COUNT
+};
 
 #endif /* ifndef PRELUDE_H */
