@@ -37,7 +37,7 @@ int main(void) {
 
     setup();
 
-    printf("\n==== Day XX ====\n");
+    printf("\n==== Day 05 ====\n");
 
 #ifdef TEST_IMPL
     run_tests();
@@ -57,7 +57,9 @@ int main(void) {
     string_println(&p2_contexts[0].common->output);
 #endif
 
+#ifdef ENABLE_BENCH
     run_benchmarks();
+#endif
 
     return 0;
 }
@@ -191,7 +193,7 @@ static inline void setup() {
 
 static string_t read_file() {
 
-    FILE *file = fopen("inputs/day_XX.txt", "r");
+    FILE *file = fopen("inputs/day_05.txt", "r");
     assert(file && "File not found");
 
     string_builder_t file_sb = sb_read_file(file, &file_arena);
